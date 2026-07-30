@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
 import { Theme } from "@/app/theme";
+import { AdminCalendar } from "@/app/admin-calendar";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -634,6 +635,7 @@ function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.
 
 /* ---------- admin ---------- */
 function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }) {
+  const [tab, setTab] = useState("calendar");
   const [fStatus, setFStatus] = useState("all");
   const [fWhen, setFWhen] = useState("upcoming");
   const [todaySlots, setTodaySlots] = useState([]);
@@ -748,7 +750,20 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
         <div className="kpi"><div className="kn">{active.filter((b) => b.status === "pending").length}</div><div className="kl">Awaiting Confirm</div></div>
       </div>
 
-      <div className="adm-grid">
+      <div className="filters" style={{ marginBottom: 18 }}>
+        {[["calendar", "Calendar"], ["list", "Bookings List"]].map(([k, l]) => (
+          <button key={k} className={"fbtn" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>{l}</button>
+        ))}
+      </div>
+
+      {tab === "calendar" && (
+        <div style={{ marginBottom: 18 }}>
+          <AdminCalendar updateBooking={updateBooking} refreshKey={bookings.length} />
+        </div>
+      )}
+
+      <div className="adm-grid" style={tab === "calendar" ? { gridTemplateColumns: "1fr" } : undefined}>
+        {tab === "list" && (
         <div className="panel">
           <div className="panel-h"><h3>Bookings</h3><span className="cnt">{filtered.length} shown</span></div>
           <div className="filters" style={{ padding: "14px 22px 4px" }}>
@@ -788,8 +803,10 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
             ))}
           </div>
         </div>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {tab === "list" && (
         <div className="panel">
           <div className="panel-h"><h3>Today's Schedule</h3><span className="cnt">{fmtDate(today)}</span></div>
           {todaySlots.length === 0 && <div className="empty">No classes scheduled today.</div>}
@@ -808,6 +825,7 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
             );
           })}
         </div>
+        )}
 
         <div className="panel">
           <div className="panel-h"><h3>Availability</h3><span className="cnt">{blocks.length} blocked</span></div>
