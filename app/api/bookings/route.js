@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, serializableTx, jsonError } from "@/lib/tx";
+import { isBlocked } from "@/lib/availability";
+import { minuteOfDay, studioNow } from "@/lib/config";
 import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
@@ -70,6 +72,15 @@ export async function POST(request) {
     const date = dateOnly(input.date);
     const startTime = to24h(input.time);
 
+    // A slot that has already started is never bookable, whatever the client says.
+    const now = studioNow();
+    if (
+      input.date < now.isoDay ||
+      (input.date === now.isoDay && minuteOfDay(startTime) <= now.minutes)
+    ) {
+      throw new HttpError(409, "That session has already started.");
+    }
+
     const booking = await serializableTx(prisma, async (tx) => {
       // Find the concrete slot, or materialise it from the weekly template.
       let session = await tx.classSession.findUnique({
@@ -93,6 +104,13 @@ export async function POST(request) {
 
       if (session.status === "CANCELLED") {
         throw new HttpError(409, "That session has been cancelled.");
+      }
+
+      // Enforce blocks server-side: the wizard hides blocked slots, but a
+      // direct API call (or a stale page) must not slip through.
+      const blocks = await tx.availabilityBlock.findMany({ where: { date } });
+      if (isBlocked(input.date, startTime, blocks)) {
+        throw new HttpError(409, "That time is not available for booking.");
       }
 
       // Re-read the count inside the serializable transaction — this is the

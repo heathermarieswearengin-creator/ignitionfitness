@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { studioNow } from "@/lib/config";
+import { to12h } from "@/lib/shape";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -299,6 +301,18 @@ h2.sh{font-family:var(--display);font-size:clamp(32px,5vw,58px);line-height:.98;
   background:rgba(224,45,36,.14);color:var(--ember2);padding:3px 8px;border-radius:20px;flex:none}
 .lead-row .ld{font-family:var(--mono);font-size:11px;color:var(--ash);flex:none}
 
+/* availability blocking */
+.blk-form{display:flex;flex-direction:column;gap:10px}
+.blk-form input{width:100%;background:var(--f800);border:1.5px solid var(--line);border-radius:11px;
+  padding:11px 13px;color:var(--bone);font-family:var(--body);font-size:14px;outline:none}
+.blk-form input:focus{border-color:var(--ember)}
+.blk-form input::placeholder{color:#6b5d52}
+.blk-form input[type=date],.blk-form input[type=time]{font-family:var(--mono);font-size:13px;color-scheme:dark}
+.blk-modes{display:flex;gap:9px}
+.blk-times{display:flex;align-items:center;gap:9px}
+.blk-times span{font-family:var(--mono);font-size:11px;color:var(--ash);flex:none}
+.blk-err{color:var(--flame);font-family:var(--mono);font-size:12px;line-height:1.5}
+
 @media(max-width:860px){
   .nav-links .nlink{display:none}
   .props,.three,.steps,.price-grid,.foot-grid{grid-template-columns:1fr}
@@ -310,24 +324,16 @@ h2.sh{font-family:var(--display);font-size:clamp(32px,5vw,58px);line-height:.98;
 `;
 
 /* ---------- data / helpers ---------- */
+// Presentational metadata only. The bookable schedule and per-session capacity
+// now live in Postgres (WeeklyTemplate -> ClassSession) and arrive via
+// /api/availability; this just supplies labels, blurbs and headline pricing.
 const CLASSES = [
-  { id: "group", label: "Group Class", tag: "All levels", price: 25, cap: 10,
+  { id: "group", label: "Group Class", tag: "All levels", price: 25,
     desc: "Small-group strength + cardio in 60 minutes. Drop-ins welcome." },
-  { id: "pt", label: "1:1 Personal Training", tag: "Private session", price: 80, cap: 1,
+  { id: "pt", label: "1:1 Personal Training", tag: "Private session", price: 80,
     desc: "One-on-one coaching with Mike, tailored to your goals." },
 ];
 const CLASS_MAP = Object.fromEntries(CLASSES.map((c) => [c.id, c]));
-
-// weekly slot template: 0=Sun ... 6=Sat
-const WEEKLY = {
-  0: [],
-  1: [["6:00 AM","group"],["9:00 AM","group"],["12:00 PM","group"],["5:30 PM","group"],["6:30 PM","group"]],
-  2: [["6:00 AM","group"],["9:00 AM","group"],["5:30 PM","group"],["6:30 PM","group"]],
-  3: [["6:00 AM","group"],["9:00 AM","group"],["12:00 PM","group"],["5:30 PM","group"],["6:30 PM","group"]],
-  4: [["6:00 AM","group"],["9:00 AM","group"],["5:30 PM","group"],["6:30 PM","group"]],
-  5: [["6:00 AM","group"],["9:00 AM","group"],["12:00 PM","group"],["5:30 PM","group"]],
-  6: [["8:00 AM","group"],["9:30 AM","group"]],
-};
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -336,7 +342,17 @@ const LOGO_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAS0AAADICAMAAACK
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const toMin = (t) => { const m = t.match(/(\d+):(\d+) (\w+)/); let h = +m[1] % 12; if (m[3] === "PM") h += 12; return h * 60 + +m[2]; };
-const next14 = () => { const a = []; const t = new Date(); for (let i = 0; i < 14; i++) { const d = new Date(t); d.setDate(t.getDate() + i); a.push(d); } return a; };
+
+// The 14-day strip is anchored to the studio's calendar day and stepped in UTC.
+// Building it from a local `new Date()` and then keying it with toISOString()
+// disagreed by one day whenever local time was behind UTC midnight — the chip
+// would read "30" while asking the server for the 31st.
+const next14 = () => {
+  const a = [];
+  const start = Date.parse(`${studioNow().isoDay}T00:00:00.000Z`);
+  for (let i = 0; i < 14; i++) a.push(new Date(start + i * 86400000));
+  return a;
+};
 
 function relTime(ts) {
   const m = Math.floor((Date.now() - ts) / 60000);
@@ -433,7 +449,7 @@ export default function App() {
       <style>{CSS}</style>
       <Nav view={view} go={go} />
       {view === "home" && <Home go={go} addLead={addLead} />}
-      {view === "book" && <Booking bookings={bookings} addBooking={addBooking} go={go} loaded={loaded} />}
+      {view === "book" && <Booking addBooking={addBooking} go={go} />}
       {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} loaded={loaded} />}
       {view !== "admin" && <Footer go={go} />}
     </div>
@@ -567,7 +583,7 @@ function Home({ go, addLead }) {
 }
 
 /* ---------- booking ---------- */
-function Booking({ bookings, addBooking, go, loaded }) {
+function Booking({ addBooking, go }) {
   const [step, setStep] = useState(1);
   const [classType, setClassType] = useState(null);
   const [date, setDate] = useState(null);
@@ -576,18 +592,32 @@ function Booking({ bookings, addBooking, go, loaded }) {
   const [done, setDone] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [slots, setSlots] = useState([]);
+  const [slotsLoaded, setSlotsLoaded] = useState(false);
 
   const days = useMemo(() => next14(), []);
   const cls = classType ? CLASS_MAP[classType] : null;
 
-  const slotsFor = (d) => {
-    const list = WEEKLY[new Date(d + "T00:00:00").getDay()] || [];
-    return list.map(([t, type]) => {
-      const taken = bookings.filter((b) => b.date === d && b.time === t && b.status !== "cancelled").length;
-      const cap = cls ? cls.cap : 10;
-      return { time: t, type, left: Math.max(0, cap - taken) };
-    });
-  };
+  // The schedule now lives in the database. This replaces the old WEEKLY
+  // constant: blocked dates, cancelled sessions and times that have already
+  // passed are filtered out server-side, and the counts are authoritative.
+  const reloadSlots = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/availability");
+      setSlots(res.ok ? await res.json() : []);
+    } catch {
+      setSlots([]);
+    } finally {
+      setSlotsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => { reloadSlots(); }, [reloadSlots]);
+
+  const slotsFor = (d) =>
+    slots.filter((s) => s.date === d && s.classType === classType);
+
+  const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType);
 
   // The server assigns the ref and enforces capacity, so wait for its answer
   // instead of optimistically showing a confirmation that might not be real.
@@ -606,8 +636,10 @@ function Booking({ bookings, addBooking, go, loaded }) {
       });
       setDone(b);
       setStep(5);
+      reloadSlots(); // refresh counts so "Book Another" sees current availability
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
+      reloadSlots(); // the slot may have filled or been blocked while they typed
     } finally {
       setSaving(false);
     }
@@ -674,34 +706,41 @@ function Booking({ bookings, addBooking, go, loaded }) {
             <SLabel>Pick a date</SLabel>
             <div className="date-row">
               {days.map((d) => {
-                const k = iso(d); const open = (WEEKLY[d.getDay()] || []).length > 0;
+                const k = iso(d); const open = dayHasSlots(k);
                 return (
                   <button key={k} disabled={!open} className={"datechip" + (date === k ? " sel" : "")}
                     onClick={() => { setDate(k); setTime(null); }} style={!open ? { opacity: .3, cursor: "not-allowed" } : {}}>
-                    <div className="dow">{DOW[d.getDay()]}</div>
-                    <div className="dnum">{d.getDate()}</div>
-                    <div className="dmo">{MON[d.getMonth()]}</div>
+                    <div className="dow">{DOW[d.getUTCDay()]}</div>
+                    <div className="dnum">{d.getUTCDate()}</div>
+                    <div className="dmo">{MON[d.getUTCMonth()]}</div>
                   </button>
                 );
               })}
             </div>
-            {date ? (
+            {!slotsLoaded && <div className="empty-day">Loading the schedule…</div>}
+            {slotsLoaded && date ? (
               <>
                 <SLabel>Available times</SLabel>
                 <div className="slot-grid">
                   {slotsFor(date).map((s) => {
-                    const cl = s.left === 0 ? "spots-none" : s.left <= 3 ? "spots-low" : "spots-ok";
+                    const left = s.spotsLeft;
+                    const cl = left === 0 ? "spots-none" : left <= 3 ? "spots-low" : "spots-ok";
                     return (
-                      <button key={s.time} disabled={s.left === 0} className={"slot" + (time === s.time ? " sel" : "")} onClick={() => setTime(s.time)}>
+                      <button key={s.sessionId} disabled={left === 0} className={"slot" + (time === s.time ? " sel" : "")} onClick={() => setTime(s.time)}>
                         <div className="stime">{s.time}</div>
-                        <div className="stype">{(cls || CLASS_MAP[s.type]).label}</div>
-                        <div className={"sspots " + cl}>{s.left === 0 ? "Full" : s.left + (s.left === 1 ? " spot left" : " spots left")}</div>
+                        <div className="stype">{(cls || CLASS_MAP[s.classType]).label}</div>
+                        <div className={"sspots " + cl}>{left === 0 ? "Full" : left + (left === 1 ? " spot left" : " spots left")}</div>
                       </button>
                     );
                   })}
                 </div>
+                {slotsFor(date).length === 0 && (
+                  <div className="empty-day">No open times left on this date.</div>
+                )}
               </>
-            ) : <div className="empty-day">Select a date to see open class times.</div>}
+            ) : slotsLoaded ? (
+              <div className="empty-day">Select a date to see open class times.</div>
+            ) : null}
           </>
         )}
 
@@ -745,7 +784,9 @@ function Booking({ bookings, addBooking, go, loaded }) {
   );
 }
 const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".14em", color: "var(--ember2)", textTransform: "uppercase", marginBottom: 18, fontWeight: 600 }}>{children}</div>);
-function fmtDate(d) { const x = new Date(d + "T00:00:00"); return `${DOW[x.getDay()]}, ${MON[x.getMonth()]} ${x.getDate()}`; }
+// Parsed and read in UTC so a "YYYY-MM-DD" always renders as that same day,
+// regardless of the viewer's own timezone.
+function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.getUTCDay()]}, ${MON[x.getUTCMonth()]} ${x.getUTCDate()}`; }
 
 /* ---------- admin ---------- */
 function Admin({ bookings, updateBooking, leads, loaded }) {
@@ -753,6 +794,60 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
   const [pass, setPass] = useState("");
   const [fStatus, setFStatus] = useState("all");
   const [fWhen, setFWhen] = useState("upcoming");
+  const [todaySlots, setTodaySlots] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+  const [blockForm, setBlockForm] = useState({ date: "", allDay: true, startTime: "06:00", endTime: "12:00", reason: "" });
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [blockError, setBlockError] = useState(null);
+
+  // "Today" must be the studio's day, not the server's UTC day — after 5pm
+  // Pacific those differ and the dashboard would jump to tomorrow.
+  const today = studioNow().isoDay;
+  // Derived from the studio's day, not the viewer's, so the filters agree with `today`.
+  const weekEnd = iso(new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86400000));
+
+  const loadSchedule = React.useCallback(async () => {
+    const [s, b] = await Promise.all([
+      fetch(`/api/availability?from=${today}&to=${today}&includePast=true`)
+        .then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch(`/api/admin/blocks?from=${today}`)
+        .then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    ]);
+    setTodaySlots(s);
+    setBlocks(b);
+  }, [today]);
+
+  useEffect(() => { if (authed) loadSchedule(); }, [authed, loadSchedule, bookings]);
+
+  const addBlock = async () => {
+    if (!blockForm.date || blockBusy) return;
+    setBlockBusy(true);
+    setBlockError(null);
+    try {
+      const res = await fetch("/api/admin/blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(blockForm),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Could not save that block.");
+      setBlockForm({ date: "", allDay: true, startTime: "06:00", endTime: "12:00", reason: "" });
+      await loadSchedule();
+    } catch (e) {
+      setBlockError(e.message);
+    } finally {
+      setBlockBusy(false);
+    }
+  };
+
+  const removeBlock = async (id) => {
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await fetch(`/api/admin/blocks/${id}`, { method: "DELETE" });
+    } finally {
+      await loadSchedule();
+    }
+  };
 
   if (!authed) {
     return (
@@ -768,9 +863,6 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
     );
   }
 
-  const today = iso(new Date());
-  const weekEnd = iso(new Date(Date.now() + 7 * 86400000));
-
   const filtered = bookings
     .filter((b) => fStatus === "all" ? true : b.status === fStatus)
     .filter((b) => {
@@ -785,13 +877,10 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
   const todays = active.filter((b) => b.date === today);
   const upcoming = active.filter((b) => b.date >= today);
   const weekCount = active.filter((b) => b.date >= today && b.date <= weekEnd).length;
-  const totalCap = todays.length ? Math.round((todays.length / (WEEKLY[new Date(today + "T00:00:00").getDay()]?.length * 10 || 50)) * 100) : 0;
-
-  // today's schedule capacity
-  const todaySlots = (WEEKLY[new Date(today + "T00:00:00").getDay()] || []).map(([t, type]) => {
-    const n = active.filter((b) => b.date === today && b.time === t).length;
-    return { time: t, type, n, cap: CLASS_MAP[type].cap };
-  });
+  // Capacity comes from the actual sessions on the schedule rather than a
+  // guessed constant, so the utilisation bar reflects real seats.
+  const seatsToday = todaySlots.reduce((n, s) => n + s.capacity, 0);
+  const totalCap = seatsToday ? Math.round((todays.length / seatsToday) * 100) : 0;
 
   return (
     <div className="adm"><div className="wrap">
@@ -854,19 +943,69 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
           <div className="panel-h"><h3>Today's Schedule</h3><span className="cnt">{fmtDate(today)}</span></div>
           {todaySlots.length === 0 && <div className="empty">No classes scheduled today.</div>}
           {todaySlots.map((s) => {
-            const pct = Math.round((s.n / s.cap) * 100);
+            const pct = Math.round((s.booked / s.capacity) * 100);
             const col = pct >= 100 ? "var(--flame)" : pct >= 70 ? "var(--gold)" : "var(--ember)";
             return (
-              <div className="sched-row" key={s.time}>
+              <div className="sched-row" key={s.sessionId}>
                 <div className="sched-time">{s.time}</div>
                 <div className="sched-info">
-                  <div className="st">{CLASS_MAP[s.type].label}</div>
+                  <div className="st">{CLASS_MAP[s.classType].label}</div>
                   <div className="capbar"><i style={{ width: Math.min(100, pct) + "%", background: col }} /></div>
                 </div>
-                <div className="sched-cnt" style={{ color: col }}>{s.n}/{s.cap}</div>
+                <div className="sched-cnt" style={{ color: col }}>{s.booked}/{s.capacity}</div>
               </div>
             );
           })}
+        </div>
+
+        <div className="panel">
+          <div className="panel-h"><h3>Availability</h3><span className="cnt">{blocks.length} blocked</span></div>
+          <div style={{ padding: "14px 22px 18px" }}>
+            <p style={{ color: "var(--ash)", fontSize: 12.5, fontFamily: "var(--mono)", marginBottom: 14, lineHeight: 1.6 }}>
+              Close the studio for a date or a stretch of hours. Blocked times vanish from booking straight away.
+            </p>
+            <div className="blk-form">
+              <input type="date" min={today} value={blockForm.date}
+                onChange={(e) => setBlockForm({ ...blockForm, date: e.target.value })} />
+              <div className="blk-modes">
+                <button className={"fbtn" + (blockForm.allDay ? " on" : "")}
+                  onClick={() => setBlockForm({ ...blockForm, allDay: true })}>All day</button>
+                <button className={"fbtn" + (!blockForm.allDay ? " on" : "")}
+                  onClick={() => setBlockForm({ ...blockForm, allDay: false })}>Hours</button>
+              </div>
+              {!blockForm.allDay && (
+                <div className="blk-times">
+                  <input type="time" value={blockForm.startTime}
+                    onChange={(e) => setBlockForm({ ...blockForm, startTime: e.target.value })} />
+                  <span>to</span>
+                  <input type="time" value={blockForm.endTime}
+                    onChange={(e) => setBlockForm({ ...blockForm, endTime: e.target.value })} />
+                </div>
+              )}
+              <input placeholder="Reason (optional)" value={blockForm.reason}
+                onChange={(e) => setBlockForm({ ...blockForm, reason: e.target.value })} />
+              <button className="btn btn-primary" style={{ width: "100%" }}
+                disabled={!blockForm.date || blockBusy} onClick={addBlock}>
+                {blockBusy ? "Saving…" : "Block This Time"}
+              </button>
+              {blockError && <div className="blk-err">{blockError}</div>}
+            </div>
+          </div>
+          {blocks.length === 0 && <div className="empty">Nothing blocked. The full schedule is open.</div>}
+          {blocks.map((b) => (
+            <div className="lead-row" key={b.id}>
+              <div className="le">
+                {fmtDate(b.date)}
+                <span style={{ color: "var(--ash)", fontFamily: "var(--mono)", fontSize: 11.5, marginLeft: 8 }}>
+                  {b.allDay ? "all day" : `${to12h(b.startTime)} – ${to12h(b.endTime)}`}
+                </span>
+              </div>
+              {b.reason && <span className="lsrc">{b.reason}</span>}
+              <button className="iact no" title="Remove block" onClick={() => removeBlock(b.id)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+          ))}
         </div>
 
         <div className="panel">
