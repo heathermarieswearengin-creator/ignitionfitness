@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { studioNow } from "@/lib/config";
+import { useSession, signOut } from "next-auth/react";
+import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
+import { Theme } from "@/app/theme";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -10,318 +12,6 @@ import { to12h } from "@/lib/shape";
    so the booking flow feeds the admin dashboard across devices.
    ============================================================ */
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap');
-
-:root{
-  --black:#0c0807; --f900:#140d0b; --f800:#1d1411; --f700:#281a15;
-  --line:#3a261d; --ember:#c9251c; --ember2:#f0ab33; --flame:#e02d24;
-  --gold:#f0ab33; --ash:#b0a193; --bone:#f3ece1; --steel:#6f8a99;
-  --display:'Anton',sans-serif; --body:'Archivo',sans-serif; --mono:'Spline Sans Mono',monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-.ign{background:var(--black);color:var(--bone);font-family:var(--body);
-  min-height:100vh;overflow-x:hidden;position:relative;-webkit-font-smoothing:antialiased}
-.ign::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.05;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px;position:relative;z-index:2}
-
-/* nav */
-.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
-  background:rgba(12,9,8,.82);border-bottom:1px solid var(--line)}
-.nav-in{display:flex;align-items:center;justify-content:space-between;height:78px}
-.logo{display:flex;align-items:center;gap:11px;cursor:pointer;background:none;border:none;padding:0}
-.logo-word{font-family:var(--display);font-size:23px;letter-spacing:.06em;color:var(--bone);line-height:1;text-transform:uppercase}
-.logo-word b{color:var(--gold);font-weight:400}
-.nav-links{display:flex;align-items:center;gap:6px}
-.nlink{background:none;border:none;color:var(--ash);font-family:var(--mono);font-size:12px;
-  letter-spacing:.08em;font-weight:500;padding:9px 13px;cursor:pointer;border-radius:7px;transition:.18s}
-.nlink:hover{color:var(--bone);background:var(--f800)}
-.nlink.on{color:var(--ember2)}
-.btn{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:12.5px;cursor:pointer;
-  border:none;border-radius:9px;padding:12px 20px;transition:.2s;text-transform:uppercase}
-.btn-primary{background:linear-gradient(150deg,var(--flame),var(--ember));color:#fff;
-  box-shadow:0 8px 26px rgba(224,45,36,.32)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(224,45,36,.5)}
-.btn-ghost{background:transparent;color:var(--bone);border:1px solid var(--line)}
-.btn-ghost:hover{border-color:var(--ember);color:var(--ember2)}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-
-/* hero */
-.hero{position:relative;padding:64px 0 78px;overflow:hidden}
-.hero-in{display:flex;flex-direction:column;align-items:center;text-align:center}
-.hero-logo{height:150px;width:auto;margin-bottom:26px;filter:drop-shadow(0 6px 30px rgba(224,45,36,.35))}
-.hero-glow{position:absolute;top:-180px;left:50%;transform:translateX(-50%);width:760px;height:540px;
-  background:radial-gradient(ellipse,rgba(224,45,36,.32),transparent 62%);filter:blur(36px);pointer-events:none}
-.hero-glow2{position:absolute;bottom:-120px;left:50%;transform:translateX(-50%);width:540px;height:420px;
-  background:radial-gradient(circle,rgba(150,22,16,.3),transparent 64%);filter:blur(40px);pointer-events:none}
-.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11.5px;
-  letter-spacing:.28em;color:var(--ember2);font-weight:600;text-transform:uppercase;margin-bottom:26px;
-  border:1px solid var(--gold);padding:9px 18px;border-radius:30px;background:rgba(240,171,51,.06)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);
-  animation:flick 2.2s infinite}
-@keyframes flick{0%,100%{opacity:1}45%{opacity:.4}}
-h1.hero-h{font-family:var(--display);font-size:clamp(46px,8vw,104px);line-height:.94;
-  letter-spacing:.01em;text-transform:uppercase;color:var(--bone)}
-.hero-h .lit{color:var(--flame)}
-.hero-h .at{color:var(--gold)}
-.hero-sub{color:var(--ash);font-size:18px;max-width:50ch;margin:28px auto 34px;line-height:1.55}
-.hero-cta{display:flex;gap:13px;flex-wrap:wrap;justify-content:center}
-.reveal{opacity:0;transform:translateY(26px);animation:rise .8s cubic-bezier(.2,.7,.3,1) forwards}
-@keyframes rise{to{opacity:1;transform:none}}
-.d1{animation-delay:.05s}.d2{animation-delay:.16s}.d3{animation-delay:.28s}.d4{animation-delay:.4s}.d5{animation-delay:.52s}
-
-/* stat strip */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
-  border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:60px;width:100%}
-.stat{background:var(--f900);padding:26px 20px;text-align:center}
-.stat .n{font-family:var(--display);font-size:38px;color:var(--ember2);line-height:1}
-.stat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--ash);
-  text-transform:uppercase;margin-top:9px}
-
-/* sections */
-.section{padding:84px 0;position:relative}
-.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.26em;color:var(--ember2);
-  text-transform:uppercase;font-weight:600;margin-bottom:14px}
-h2.sh{font-family:var(--display);font-size:clamp(32px,5vw,58px);line-height:.98;text-transform:uppercase;letter-spacing:.01em}
-.sh-sub{color:var(--ash);font-size:16px;margin-top:14px;max-width:54ch;line-height:1.5}
-
-.props{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:42px}
-.prop{display:flex;gap:15px;align-items:flex-start;background:var(--f900);border:1px solid var(--line);
-  border-radius:13px;padding:22px 24px;transition:.2s}
-.prop:hover{border-color:var(--ember);transform:translateY(-3px)}
-.prop .ic{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
-  background:linear-gradient(150deg,rgba(224,45,36,.18),rgba(150,22,16,.08));color:var(--ember2)}
-.prop p{color:var(--ash);font-size:15px;line-height:1.5;font-weight:500}
-
-.three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:46px}
-.big{background:var(--f900);border:1px solid var(--line);border-radius:16px;padding:34px 28px;text-align:center}
-.big .n{font-family:var(--display);font-size:62px;color:transparent;line-height:1;
-  background:linear-gradient(120deg,var(--gold),var(--ember));-webkit-background-clip:text;background-clip:text}
-.big .t{font-family:var(--display);font-size:18px;letter-spacing:.02em;text-transform:uppercase;margin:8px 0 10px}
-.big p{color:var(--ash);font-size:14px;line-height:1.5}
-
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:46px}
-.step{position:relative;background:var(--f900);border:1px solid var(--line);border-radius:16px;padding:30px 26px}
-.step .num{font-family:var(--display);font-size:54px;color:var(--f700);line-height:.8;position:absolute;top:18px;right:22px}
-.step h4{font-family:var(--display);font-size:21px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:12px;color:var(--ember2)}
-.step p{color:var(--ash);font-size:14.5px;line-height:1.55;position:relative}
-
-/* pricing */
-.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:46px}
-.pcard{background:var(--f900);border:1px solid var(--line);border-radius:16px;padding:30px 26px;position:relative;transition:.2s}
-.pcard:hover{transform:translateY(-4px)}
-.pcard.feat{border-color:var(--ember);background:linear-gradient(180deg,rgba(224,45,36,.08),var(--f900))}
-.pbadge{position:absolute;top:-11px;left:26px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;
-  background:linear-gradient(150deg,var(--flame),var(--ember));color:#fff;padding:5px 12px;border-radius:20px;font-weight:700;text-transform:uppercase}
-.pcard .pname{font-family:var(--display);font-size:24px;text-transform:uppercase;letter-spacing:.02em}
-.pcard .pamt{font-family:var(--display);font-size:46px;color:var(--ember2);margin:6px 0 2px}
-.pcard .pamt span{font-family:var(--mono);font-size:13px;color:var(--ash);font-weight:500}
-.pcard .pdesc{color:var(--ash);font-size:13.5px;margin-bottom:18px}
-.pcard ul{list-style:none;margin-bottom:22px}
-.pcard li{display:flex;gap:9px;align-items:center;font-size:14px;color:var(--bone);padding:6px 0;font-weight:500}
-.pcard li svg{flex:none;color:var(--ember)}
-
-/* CTA band */
-.band{background:linear-gradient(120deg,var(--flame),var(--ember));border-radius:22px;
-  padding:62px 40px;text-align:center;position:relative;overflow:hidden;margin:0 auto}
-.band h2{font-family:var(--display);font-size:clamp(34px,5vw,60px);color:#fff;text-transform:uppercase;line-height:.98}
-.band p{color:rgba(255,255,255,.9);margin:14px 0 28px;font-size:17px;font-weight:500}
-.band .btn-ghost{background:#fff;color:var(--flame);border:none}
-.band .btn-ghost:hover{transform:translateY(-2px)}
-
-/* footer */
-.foot{border-top:1px solid var(--line);padding:54px 0 40px;margin-top:30px}
-.foot-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:40px}
-.foot h5{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ember2);text-transform:uppercase;margin-bottom:16px}
-.foot a,.foot p{color:var(--ash);font-size:14px;display:block;margin-bottom:9px;text-decoration:none;line-height:1.5}
-.foot a:hover{color:var(--bone)}
-.foot-bottom{margin-top:40px;padding-top:22px;border-top:1px solid var(--line);
-  font-family:var(--mono);font-size:11px;color:var(--ash);letter-spacing:.05em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
-
-/* ---------- booking ---------- */
-.page{padding:48px 0 90px;min-height:80vh}
-.page-head{text-align:center;margin-bottom:38px}
-.page-head h1{font-family:var(--display);font-size:clamp(36px,6vw,62px);text-transform:uppercase;line-height:1}
-.page-head p{color:var(--ash);margin-top:12px;font-size:16px}
-.steps-bar{display:flex;align-items:center;justify-content:center;gap:0;margin:0 auto 40px;max-width:560px}
-.sbubble{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);
-  font-weight:700;font-size:13px;background:var(--f800);border:1px solid var(--line);color:var(--ash);flex:none}
-.sbubble.on{background:linear-gradient(150deg,var(--flame),var(--ember));color:#fff;border-color:transparent}
-.sbubble.done{background:var(--f700);color:var(--ember2);border-color:var(--ember)}
-.sline{height:2px;flex:1;background:var(--line);min-width:24px}
-.sline.on{background:var(--ember)}
-.card{background:var(--f900);border:1px solid var(--line);border-radius:18px;padding:34px;max-width:760px;margin:0 auto}
-.opt-grid{display:grid;gap:13px}
-.opt{display:flex;align-items:center;gap:18px;text-align:left;width:100%;background:var(--f800);
-  border:1.5px solid var(--line);border-radius:13px;padding:20px 22px;cursor:pointer;transition:.18s;color:var(--bone)}
-.opt:hover{border-color:var(--ember2)}
-.opt.sel{border-color:var(--ember);background:linear-gradient(120deg,rgba(224,45,36,.1),var(--f800))}
-.opt .oicon{width:46px;height:46px;border-radius:12px;flex:none;display:grid;place-items:center;
-  background:linear-gradient(150deg,rgba(224,45,36,.2),rgba(150,22,16,.06));color:var(--ember2)}
-.opt .otitle{font-family:var(--display);font-size:20px;letter-spacing:.02em;text-transform:uppercase}
-.opt .otag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase;margin-top:3px}
-.opt .odesc{font-size:13.5px;color:var(--ash);margin-top:6px;line-height:1.4}
-.opt .oprice{margin-left:auto;font-family:var(--display);font-size:26px;color:var(--ember2);text-align:right;flex:none}
-.opt .oprice small{display:block;font-family:var(--mono);font-size:10px;color:var(--ash);font-weight:500}
-
-.date-row{display:flex;gap:9px;overflow-x:auto;padding-bottom:10px;margin-bottom:26px}
-.datechip{flex:none;width:74px;background:var(--f800);border:1.5px solid var(--line);border-radius:12px;
-  padding:13px 0;text-align:center;cursor:pointer;transition:.16s}
-.datechip:hover{border-color:var(--ember2)}
-.datechip.sel{border-color:var(--ember);background:linear-gradient(150deg,rgba(224,45,36,.16),var(--f800))}
-.datechip .dow{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ash);text-transform:uppercase}
-.datechip .dnum{font-family:var(--display);font-size:26px;line-height:1;margin:4px 0}
-.datechip .dmo{font-family:var(--mono);font-size:9.5px;color:var(--ash);text-transform:uppercase}
-.datechip.sel .dnum{color:var(--ember2)}
-.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:11px}
-.slot{background:var(--f800);border:1.5px solid var(--line);border-radius:12px;padding:15px 14px;cursor:pointer;
-  text-align:left;transition:.16s;color:var(--bone)}
-.slot:hover:not(:disabled){border-color:var(--ember2)}
-.slot.sel{border-color:var(--ember);background:linear-gradient(150deg,rgba(224,45,36,.16),var(--f800))}
-.slot:disabled{opacity:.32;cursor:not-allowed}
-.slot .stime{font-family:var(--display);font-size:19px;letter-spacing:.01em}
-.slot .stype{font-family:var(--mono);font-size:10px;color:var(--ash);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-.slot .sspots{font-family:var(--mono);font-size:11px;margin-top:7px;font-weight:600}
-.spots-ok{color:var(--steel)}.spots-low{color:var(--gold)}.spots-none{color:var(--flame)}
-.empty-day{text-align:center;color:var(--ash);font-family:var(--mono);font-size:13px;padding:30px}
-
-.field{margin-bottom:18px}
-.field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ash);
-  text-transform:uppercase;margin-bottom:7px}
-.field input{width:100%;background:var(--f800);border:1.5px solid var(--line);border-radius:11px;
-  padding:13px 15px;color:var(--bone);font-family:var(--body);font-size:15px;outline:none;transition:.16s}
-.field input:focus{border-color:var(--ember)}
-.field input::placeholder{color:#6b5d52}
-
-.summary{background:var(--f800);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin-bottom:24px}
-.srow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
-.srow:last-child{border:none}
-.srow .k{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase}
-.srow .v{font-weight:600}
-.srow.total .v{font-family:var(--display);font-size:24px;color:var(--ember2)}
-
-.nav-btns{display:flex;justify-content:space-between;gap:12px;margin-top:28px;max-width:760px;margin-left:auto;margin-right:auto}
-
-.confirm{text-align:center;max-width:560px;margin:0 auto}
-.confirm .seal{width:90px;height:90px;border-radius:50%;margin:0 auto 24px;display:grid;place-items:center;
-  background:linear-gradient(150deg,var(--flame),var(--ember));box-shadow:0 0 40px rgba(224,45,36,.5);
-  animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
-@keyframes pop{from{transform:scale(.5);opacity:0}}
-.confirm h1{font-family:var(--display);font-size:48px;text-transform:uppercase;margin-bottom:10px}
-.confirm .ref{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--ember2);margin:16px 0 4px}
-
-/* ---------- admin ---------- */
-.adm{padding:34px 0 80px;min-height:90vh}
-.adm-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;flex-wrap:wrap;gap:14px}
-.adm-top h1{font-family:var(--display);font-size:38px;text-transform:uppercase;line-height:1}
-.adm-top h1 small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ember2);margin-top:5px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:26px}
-.kpi{background:var(--f900);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
-.kpi .kn{font-family:var(--display);font-size:40px;color:var(--ember2);line-height:1}
-.kpi .kl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--ash);text-transform:uppercase;margin-top:8px}
-.kpi .kbar{height:5px;border-radius:4px;background:var(--f700);margin-top:12px;overflow:hidden}
-.kpi .kbar i{display:block;height:100%;background:linear-gradient(90deg,var(--ember),var(--gold))}
-.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
-.fbtn{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--f800);
-  border:1px solid var(--line);color:var(--ash);padding:8px 14px;border-radius:8px;cursor:pointer;transition:.15s;font-weight:600}
-.fbtn:hover{color:var(--bone)}
-.fbtn.on{background:var(--f700);color:var(--ember2);border-color:var(--ember)}
-.adm-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
-.panel{background:var(--f900);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.panel-h{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-.panel-h h3{font-family:var(--display);font-size:18px;text-transform:uppercase;letter-spacing:.02em}
-.panel-h .cnt{font-family:var(--mono);font-size:11px;color:var(--ash)}
-.book-row{display:flex;align-items:center;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line);transition:.14s}
-.book-row:last-child{border:none}
-.book-row:hover{background:var(--f800)}
-.avatar{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;font-family:var(--display);
-  font-size:17px;color:#fff;background:linear-gradient(150deg,var(--flame),var(--ember))}
-.bmeta{flex:1;min-width:0}
-.bmeta .bn{font-weight:700;font-size:15px}
-.bmeta .bd{font-family:var(--mono);font-size:11.5px;color:var(--ash);margin-top:3px}
-.badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  padding:4px 9px;border-radius:20px;flex:none}
-.bg-confirmed{background:rgba(111,138,153,.18);color:var(--steel)}
-.bg-checked-in{background:rgba(255,176,46,.16);color:var(--gold)}
-.bg-pending{background:rgba(179,164,150,.14);color:var(--ash)}
-.bg-cancelled{background:rgba(150,22,16,.14);color:var(--flame)}
-.row-acts{display:flex;gap:5px;flex:none}
-.iact{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--f800);color:var(--ash);
-  cursor:pointer;display:grid;place-items:center;transition:.15s}
-.iact:hover{color:var(--bone);border-color:var(--ember2)}
-.iact.ok:hover{color:var(--steel)}.iact.go:hover{color:var(--gold)}.iact.no:hover{color:var(--flame)}
-.sched-row{display:flex;align-items:center;gap:13px;padding:13px 22px;border-bottom:1px solid var(--line)}
-.sched-row:last-child{border:none}
-.sched-time{font-family:var(--display);font-size:18px;width:74px;flex:none}
-.sched-info{flex:1}
-.sched-info .st{font-family:var(--mono);font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:.06em}
-.capbar{height:7px;border-radius:4px;background:var(--f700);margin-top:6px;overflow:hidden}
-.capbar i{display:block;height:100%;border-radius:4px}
-.sched-cnt{font-family:var(--mono);font-size:13px;font-weight:700;width:46px;text-align:right;flex:none}
-.empty{padding:46px;text-align:center;color:var(--ash);font-family:var(--mono);font-size:13px}
-
-.gate{max-width:380px;margin:80px auto;text-align:center}
-.gate .glock{width:64px;height:64px;border-radius:16px;margin:0 auto 20px;display:grid;place-items:center;
-  background:var(--f800);border:1px solid var(--line);color:var(--ember2)}
-.gate h2{font-family:var(--display);font-size:30px;text-transform:uppercase;margin-bottom:8px}
-.gate p{color:var(--ash);font-size:14px;margin-bottom:24px}
-.hint{font-family:var(--mono);font-size:11px;color:var(--ash);margin-top:14px}
-
-/* ---------- lead magnet ---------- */
-.lead{display:grid;grid-template-columns:1.1fr .9fr;gap:38px;align-items:center;
-  background:linear-gradient(150deg,var(--f900),var(--f800));border:1px solid var(--line);
-  border-radius:22px;padding:48px 46px;position:relative;overflow:hidden}
-.lead-glow{position:absolute;top:-110px;right:-70px;width:360px;height:360px;
-  background:radial-gradient(circle,rgba(224,45,36,.2),transparent 65%);filter:blur(32px);pointer-events:none}
-.lead h2{font-family:var(--display);font-size:clamp(30px,4vw,48px);text-transform:uppercase;line-height:.96}
-.lead .lp{color:var(--ash);font-size:15.5px;line-height:1.55;margin:14px 0 22px;max-width:42ch}
-.lead ul{list-style:none;display:grid;gap:10px}
-.lead li{display:flex;gap:11px;align-items:center;font-size:14.5px;font-weight:500}
-.lead li svg{flex:none;color:var(--ember)}
-.lead-form{background:var(--black);border:1px solid var(--line);border-radius:16px;padding:30px;position:relative;z-index:2}
-.lead-form .ttl{font-family:var(--display);font-size:21px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
-.lead-form .sub{color:var(--ash);font-size:13px;margin-bottom:18px;line-height:1.4}
-.lead-form input{width:100%;background:var(--f800);border:1.5px solid var(--line);border-radius:11px;
-  padding:14px 15px;color:var(--bone);font-family:var(--body);font-size:15px;outline:none;margin-bottom:12px;transition:.16s}
-.lead-form input:focus{border-color:var(--ember)}
-.lead-form input::placeholder{color:#6b5d52}
-.lead-done{text-align:center;padding:10px 4px}
-.lead-done .lc{width:60px;height:60px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;
-  background:linear-gradient(150deg,var(--flame),var(--ember));box-shadow:0 0 30px rgba(224,45,36,.45);animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
-.lead-done h4{font-family:var(--display);font-size:23px;text-transform:uppercase;margin-bottom:8px}
-.lead-done p{color:var(--ash);font-size:14px;line-height:1.5}
-.privacy{font-family:var(--mono);font-size:10.5px;color:var(--ash);text-align:center;margin-top:12px;letter-spacing:.04em}
-
-/* ---------- leads panel ---------- */
-.lead-row{display:flex;align-items:center;gap:11px;padding:13px 22px;border-bottom:1px solid var(--line)}
-.lead-row:last-child{border:none}
-.lead-row .le{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lead-row .lsrc{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-  background:rgba(224,45,36,.14);color:var(--ember2);padding:3px 8px;border-radius:20px;flex:none}
-.lead-row .ld{font-family:var(--mono);font-size:11px;color:var(--ash);flex:none}
-
-/* availability blocking */
-.blk-form{display:flex;flex-direction:column;gap:10px}
-.blk-form input{width:100%;background:var(--f800);border:1.5px solid var(--line);border-radius:11px;
-  padding:11px 13px;color:var(--bone);font-family:var(--body);font-size:14px;outline:none}
-.blk-form input:focus{border-color:var(--ember)}
-.blk-form input::placeholder{color:#6b5d52}
-.blk-form input[type=date],.blk-form input[type=time]{font-family:var(--mono);font-size:13px;color-scheme:dark}
-.blk-modes{display:flex;gap:9px}
-.blk-times{display:flex;align-items:center;gap:9px}
-.blk-times span{font-family:var(--mono);font-size:11px;color:var(--ash);flex:none}
-.blk-err{color:var(--flame);font-family:var(--mono);font-size:12px;line-height:1.5}
-
-@media(max-width:860px){
-  .nav-links .nlink{display:none}
-  .props,.three,.steps,.price-grid,.foot-grid{grid-template-columns:1fr}
-  .stats{grid-template-columns:1fr 1fr}
-  .kpis{grid-template-columns:1fr 1fr}
-  .adm-grid{grid-template-columns:1fr}
-  .lead{grid-template-columns:1fr;padding:32px 24px;gap:28px}
-}
-`;
 
 /* ---------- data / helpers ---------- */
 // Presentational metadata only. The bookable schedule and per-session capacity
@@ -379,12 +69,20 @@ function Logo({ h = 44 }) {
 
 /* ================= APP ================= */
 export default function App() {
+  const { data: session, status } = useSession();
+  const user = session?.user ?? null;
+  const isAdmin = user?.role === "ADMIN";
+
   const [view, setView] = useState("home");
   const [bookings, setBookings] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
+  // Bookings and leads are admin-only reads now, so only fetch them once we
+  // know the signed-in user is an admin — otherwise they'd just 401.
   useEffect(() => {
+    if (status === "loading") return;
+    if (!isAdmin) { setBookings([]); setLeads([]); setLoaded(true); return; }
     (async () => {
       const [b, l] = await Promise.all([
         fetch("/api/bookings").then((r) => (r.ok ? r.json() : [])).catch(() => []),
@@ -394,10 +92,11 @@ export default function App() {
       setLeads(l);
       setLoaded(true);
     })();
-  }, []);
+  }, [isAdmin, status]);
 
   // The server owns the id, ref and capacity check, so the created booking is
-  // returned to the caller rather than invented in the browser.
+  // returned to the caller rather than invented in the browser. Accepts either
+  // the single-booking shape or { items: [...] } for the cart.
   const addBooking = async (input) => {
     const res = await fetch("/api/bookings", {
       method: "POST",
@@ -406,7 +105,8 @@ export default function App() {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(data?.error || "Could not complete that booking.");
-    setBookings((prev) => [...prev, data]);
+    const made = Array.isArray(data) ? data : [data];
+    if (isAdmin) setBookings((prev) => [...prev, ...made]);
     return data;
   };
 
@@ -446,18 +146,19 @@ export default function App() {
 
   return (
     <div className="ign">
-      <style>{CSS}</style>
-      <Nav view={view} go={go} />
+      <Theme />
+      <Nav view={view} go={go} user={user} isAdmin={isAdmin} />
       {view === "home" && <Home go={go} addLead={addLead} />}
-      {view === "book" && <Booking addBooking={addBooking} go={go} />}
-      {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} loaded={loaded} />}
+      {view === "book" && <Booking addBooking={addBooking} go={go} user={user} />}
+      {view === "mine" && <MySessions go={go} user={user} status={status} />}
+      {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} loaded={loaded} user={user} isAdmin={isAdmin} status={status} />}
       {view !== "admin" && <Footer go={go} />}
     </div>
   );
 }
 
 /* ---------- nav ---------- */
-function Nav({ view, go }) {
+function Nav({ view, go, user, isAdmin }) {
   return (
     <nav className="nav">
       <div className="wrap nav-in">
@@ -468,11 +169,82 @@ function Nav({ view, go }) {
           <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => go("home")}>HOME</button>
           <button className="nlink" onClick={() => go("home")}>OUR STORY</button>
           <button className="nlink" onClick={() => go("home")}>PRICING</button>
-          <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => go("admin")}>ADMIN</button>
+          {user && (
+            <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => go("mine")}>MY SESSIONS</button>
+          )}
+          {isAdmin && (
+            <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => go("admin")}>ADMIN</button>
+          )}
+          {user
+            ? <button className="nlink" onClick={() => signOut({ callbackUrl: "/" })}>SIGN OUT</button>
+            : <a className="nlink" href="/login">SIGN IN</a>}
           <button className="btn btn-primary" onClick={() => go("book")} style={{ marginLeft: 8 }}>Book a Class</button>
         </div>
       </div>
     </nav>
+  );
+}
+
+/* ---------- my sessions ---------- */
+function MySessions({ go, user, status }) {
+  const [data, setData] = useState({ upcoming: [], past: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    fetch("/api/me/bookings")
+      .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
+      .then(setData)
+      .catch(() => setData({ upcoming: [], past: [] }))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  if (status === "loading") return <div className="page"><div className="wrap"><div className="empty">Loading…</div></div></div>;
+
+  if (!user) {
+    return (
+      <div className="page"><div className="wrap"><div className="gate">
+        <div className="glock"><Lock /></div>
+        <h2>Sign In</h2>
+        <p>Sign in to see the sessions you have booked.</p>
+        <a className="btn btn-primary" style={{ width: "100%" }} href="/login?next=/">Sign In</a>
+      </div></div></div>
+    );
+  }
+
+  const Row = ({ b }) => (
+    <div className="mysess">
+      <div className="ms-when">
+        <div className="ms-d">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+        <div className="ms-t">{fmtDate(b.date)} · {b.time} · {b.ref}</div>
+      </div>
+      <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+    </div>
+  );
+
+  return (
+    <div className="page"><div className="wrap">
+      <div className="page-head">
+        <h1>My Sessions</h1>
+        <p>Everything you have booked, {user.name?.split(" ")[0] ?? "athlete"}.</p>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 18 }}>
+        <div className="panel-h"><h3>Upcoming</h3><span className="cnt">{data.upcoming.length}</span></div>
+        {loading && <div className="empty">Loading…</div>}
+        {!loading && data.upcoming.length === 0 && (
+          <div className="empty">Nothing booked yet. <button className="linkish" onClick={() => go("book")}>Book a session</button></div>
+        )}
+        {data.upcoming.map((b) => <Row key={b.id} b={b} />)}
+      </div>
+
+      {data.past.length > 0 && (
+        <div className="panel">
+          <div className="panel-h"><h3>Past &amp; Cancelled</h3><span className="cnt">{data.past.length}</span></div>
+          {data.past.map((b) => <Row key={b.id} b={b} />)}
+        </div>
+      )}
+    </div></div>
   );
 }
 
@@ -583,13 +355,13 @@ function Home({ go, addLead }) {
 }
 
 /* ---------- booking ---------- */
-function Booking({ addBooking, go }) {
+function Booking({ addBooking, go, user }) {
   const [step, setStep] = useState(1);
   const [classType, setClassType] = useState(null);
   const [date, setDate] = useState(null);
-  const [time, setTime] = useState(null);
+  const [cart, setCart] = useState([]); // [{ sessionId, date, time, classType }]
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
-  const [done, setDone] = useState(null);
+  const [done, setDone] = useState(null); // array of created bookings
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [slots, setSlots] = useState([]);
@@ -598,9 +370,9 @@ function Booking({ addBooking, go }) {
   const days = useMemo(() => next14(), []);
   const cls = classType ? CLASS_MAP[classType] : null;
 
-  // The schedule now lives in the database. This replaces the old WEEKLY
-  // constant: blocked dates, cancelled sessions and times that have already
-  // passed are filtered out server-side, and the counts are authoritative.
+  // The schedule lives in the database. Blocked dates, cancelled sessions and
+  // times that have already passed are filtered out server-side, and the
+  // spots-left counts are authoritative.
   const reloadSlots = React.useCallback(async () => {
     try {
       const res = await fetch("/api/availability");
@@ -614,60 +386,96 @@ function Booking({ addBooking, go }) {
 
   useEffect(() => { reloadSlots(); }, [reloadSlots]);
 
-  const slotsFor = (d) =>
-    slots.filter((s) => s.date === d && s.classType === classType);
+  // Members book under their account; their details come from the session.
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, name: user.name || "", email: user.email || "" }));
+  }, [user]);
 
+  const slotsFor = (d) => slots.filter((s) => s.date === d && s.classType === classType);
   const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType);
 
-  // The server assigns the ref and enforces capacity, so wait for its answer
-  // instead of optimistically showing a confirmation that might not be real.
+  const inCart = (sessionId) => cart.some((c) => c.sessionId === sessionId);
+  const toggleSlot = (s) =>
+    setCart((c) =>
+      c.some((x) => x.sessionId === s.sessionId)
+        ? c.filter((x) => x.sessionId !== s.sessionId)
+        : [...c, { sessionId: s.sessionId, date: s.date, time: s.time, classType: s.classType }]
+    );
+
+  const cartSorted = [...cart].sort((a, b) =>
+    a.date === b.date ? toMin(a.time) - toMin(b.time) : a.date.localeCompare(b.date)
+  );
+  const total = cart.reduce((n, c) => n + (CLASS_MAP[c.classType]?.price ?? 0), 0);
+
+  const reset = () => {
+    setDone(null); setStep(1); setClassType(null); setDate(null);
+    setCart([]); setError(null);
+    setForm({ name: user?.name || "", email: user?.email || "", phone: "" });
+  };
+
+  // The server assigns refs, enforces capacity and books the whole cart in one
+  // transaction — all of it lands or none of it does.
   const confirm = async () => {
-    if (saving) return;
+    if (saving || cart.length === 0) return;
     setSaving(true);
     setError(null);
     try {
-      const b = await addBooking({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        classType,
-        date,
-        time,
+      const created = await addBooking({
+        items: cart.map((c) => ({ sessionId: c.sessionId })),
+        contact: user
+          ? { phone: form.phone.trim() }
+          : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
       });
-      setDone(b);
+      setDone(Array.isArray(created) ? created : [created]);
       setStep(5);
-      reloadSlots(); // refresh counts so "Book Another" sees current availability
+      reloadSlots();
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
-      reloadSlots(); // the slot may have filled or been blocked while they typed
+      reloadSlots(); // a slot may have filled or been blocked while they typed
     } finally {
       setSaving(false);
     }
   };
 
   if (done) {
+    const first = done[0];
     return (
       <div className="page"><div className="wrap"><div className="confirm">
         <div className="seal"><Check s={42} /></div>
-        <h1>You're Booked</h1>
-        <p style={{ color: "var(--ash)", fontSize: 16 }}>See you at the bell, {done.name.split(" ")[0]}. A confirmation is on its way to {done.email}.</p>
-        <div className="ref">CONFIRMATION · {done.ref}</div>
+        <h1>{done.length > 1 ? "You're All Booked" : "You're Booked"}</h1>
+        <p style={{ color: "var(--ash)", fontSize: 16 }}>
+          See you at the bell, {first.name.split(" ")[0]}. A confirmation is on its way to {first.email}.
+        </p>
+        <div className="ref">
+          {done.length > 1 ? `${done.length} SESSIONS · ${done.map((b) => b.ref).join(" · ")}` : `CONFIRMATION · ${first.ref}`}
+        </div>
         <div className="summary" style={{ marginTop: 24, textAlign: "left" }}>
-          <div className="srow"><span className="k">Class</span><span className="v">{CLASS_MAP[done.classType].label}</span></div>
-          <div className="srow"><span className="k">When</span><span className="v">{fmtDate(done.date)} · {done.time}</span></div>
-          <div className="srow"><span className="k">Location</span><span className="v">9125 Archibald Ave, Ste D</span></div>
-          <div className="srow total"><span className="k">Due at studio</span><span className="v">${CLASS_MAP[done.classType].price}</span></div>
+          {done.map((b) => (
+            <div className="srow" key={b.id}>
+              <span className="k">{CLASS_MAP[b.classType]?.label ?? b.classType}</span>
+              <span className="v">{fmtDate(b.date)} · {b.time}</span>
+            </div>
+          ))}
+          <div className="srow"><span className="k">Location</span><span className="v">{STUDIO.addressLine}</span></div>
+          <div className="srow total">
+            <span className="k">Due at studio</span>
+            <span className="v">${done.reduce((n, b) => n + (CLASS_MAP[b.classType]?.price ?? 0), 0)}</span>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
           <button className="btn btn-ghost" onClick={() => go("home")}>Back Home</button>
-          <button className="btn btn-primary" onClick={() => { setDone(null); setStep(1); setClassType(null); setDate(null); setTime(null); setForm({ name: "", email: "", phone: "" }); setError(null); }}>Book Another</button>
+          {user && <button className="btn btn-ghost" onClick={() => go("mine")}>My Sessions</button>}
+          <button className="btn btn-primary" onClick={reset}>Book Another</button>
         </div>
       </div></div></div>
     );
   }
 
-  const canNext = (step === 1 && classType) || (step === 2 && date && time) ||
-    (step === 3 && form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7);
+  const contactOk = user
+    ? true
+    : form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7;
+  const canNext =
+    (step === 1 && classType) || (step === 2 && cart.length > 0) || (step === 3 && contactOk);
 
   return (
     <div className="page"><div className="wrap">
@@ -703,13 +511,13 @@ function Booking({ addBooking, go }) {
 
         {step === 2 && (
           <>
-            <SLabel>Pick a date</SLabel>
+            <SLabel>Pick your dates</SLabel>
             <div className="date-row">
               {days.map((d) => {
                 const k = iso(d); const open = dayHasSlots(k);
                 return (
                   <button key={k} disabled={!open} className={"datechip" + (date === k ? " sel" : "")}
-                    onClick={() => { setDate(k); setTime(null); }} style={!open ? { opacity: .3, cursor: "not-allowed" } : {}}>
+                    onClick={() => setDate(k)} style={!open ? { opacity: .3, cursor: "not-allowed" } : {}}>
                     <div className="dow">{DOW[d.getUTCDay()]}</div>
                     <div className="dnum">{d.getUTCDate()}</div>
                     <div className="dmo">{MON[d.getUTCMonth()]}</div>
@@ -720,51 +528,87 @@ function Booking({ addBooking, go }) {
             {!slotsLoaded && <div className="empty-day">Loading the schedule…</div>}
             {slotsLoaded && date ? (
               <>
-                <SLabel>Available times</SLabel>
+                <SLabel>Tap every time you want</SLabel>
                 <div className="slot-grid">
                   {slotsFor(date).map((s) => {
                     const left = s.spotsLeft;
+                    const picked = inCart(s.sessionId);
                     const cl = left === 0 ? "spots-none" : left <= 3 ? "spots-low" : "spots-ok";
                     return (
-                      <button key={s.sessionId} disabled={left === 0} className={"slot" + (time === s.time ? " sel" : "")} onClick={() => setTime(s.time)}>
+                      <button key={s.sessionId} disabled={left === 0 && !picked}
+                        className={"slot" + (picked ? " picked" : "")} onClick={() => toggleSlot(s)}>
                         <div className="stime">{s.time}</div>
                         <div className="stype">{(cls || CLASS_MAP[s.classType]).label}</div>
-                        <div className={"sspots " + cl}>{left === 0 ? "Full" : left + (left === 1 ? " spot left" : " spots left")}</div>
+                        <div className={"sspots " + cl}>
+                          {picked ? "Added ✓" : left === 0 ? "Full" : left + (left === 1 ? " spot left" : " spots left")}
+                        </div>
                       </button>
                     );
                   })}
                 </div>
-                {slotsFor(date).length === 0 && (
-                  <div className="empty-day">No open times left on this date.</div>
-                )}
+                {slotsFor(date).length === 0 && <div className="empty-day">No open times left on this date.</div>}
               </>
             ) : slotsLoaded ? (
               <div className="empty-day">Select a date to see open class times.</div>
             ) : null}
+
+            {cart.length > 0 && (
+              <div className="cart-bar">
+                <span className="cn">{cart.length}</span>
+                <span className="cl">
+                  {cart.length === 1 ? "session selected" : "sessions selected"} · ${total} due at studio
+                  <br />Pick more dates above, or continue.
+                </span>
+                <button className="btn btn-ghost" onClick={() => setCart([])}>Clear</button>
+              </div>
+            )}
           </>
         )}
 
         {step === 3 && (
           <>
             <SLabel>Your details</SLabel>
-            <div className="field"><label>Full name</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
-            <div className="field"><label>Email</label>
-              <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
-            <div className="field"><label>Phone</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+            {user ? (
+              <>
+                <div className="summary" style={{ marginBottom: 18 }}>
+                  <div className="srow"><span className="k">Booking as</span><span className="v">{user.name}</span></div>
+                  <div className="srow"><span className="k">Email</span><span className="v">{user.email}</span></div>
+                </div>
+                <div className="field"><label>Phone (optional)</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+              </>
+            ) : (
+              <>
+                <div className="field"><label>Full name</label>
+                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
+                <div className="field"><label>Email</label>
+                  <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
+                <div className="field"><label>Phone</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+                <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>
+                  Booking as a guest. <a href="/signup" style={{ color: "var(--ember2)" }}>Create an account</a> to track your sessions.
+                </p>
+              </>
+            )}
           </>
         )}
 
         {step === 4 && (
           <>
             <SLabel>Review &amp; confirm</SLabel>
+            <div className="cart-list">
+              {cartSorted.map((c) => (
+                <div className="cart-item" key={c.sessionId}>
+                  <span className="ci-when">{fmtDate(c.date)} · {c.time}</span>
+                  <span className="ci-type">{CLASS_MAP[c.classType]?.label ?? c.classType}</span>
+                </div>
+              ))}
+            </div>
             <div className="summary">
-              <div className="srow"><span className="k">Name</span><span className="v">{form.name}</span></div>
-              <div className="srow"><span className="k">Class</span><span className="v">{cls.label}</span></div>
-              <div className="srow"><span className="k">When</span><span className="v">{fmtDate(date)} · {time}</span></div>
-              <div className="srow"><span className="k">Contact</span><span className="v">{form.email}</span></div>
-              <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls.price}</span></div>
+              <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
+              <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
+              <div className="srow"><span className="k">Sessions</span><span className="v">{cart.length}</span></div>
+              <div className="srow total"><span className="k">Due at studio</span><span className="v">${total}</span></div>
             </div>
             <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>Payment handled in person. Cancel free up to 12 hours before.</p>
             {error && (
@@ -778,7 +622,7 @@ function Booking({ addBooking, go }) {
         <button className="btn btn-ghost" onClick={() => step === 1 ? go("home") : setStep(step - 1)}>{step === 1 ? "Cancel" : "Back"}</button>
         {step < 4
           ? <button className="btn btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}>Continue <Arrow /></button>
-          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking…" : <>Confirm Booking <Check /></>}</button>}
+          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking…" : <>Confirm {cart.length > 1 ? `${cart.length} Sessions` : "Booking"} <Check /></>}</button>}
       </div>
     </div></div>
   );
@@ -789,9 +633,7 @@ const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontS
 function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.getUTCDay()]}, ${MON[x.getUTCMonth()]} ${x.getUTCDate()}`; }
 
 /* ---------- admin ---------- */
-function Admin({ bookings, updateBooking, leads, loaded }) {
-  const [authed, setAuthed] = useState(false);
-  const [pass, setPass] = useState("");
+function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }) {
   const [fStatus, setFStatus] = useState("all");
   const [fWhen, setFWhen] = useState("upcoming");
   const [todaySlots, setTodaySlots] = useState([]);
@@ -817,7 +659,7 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
     setBlocks(b);
   }, [today]);
 
-  useEffect(() => { if (authed) loadSchedule(); }, [authed, loadSchedule, bookings]);
+  useEffect(() => { if (isAdmin) loadSchedule(); }, [isAdmin, loadSchedule, bookings]);
 
   const addBlock = async () => {
     if (!blockForm.date || blockBusy) return;
@@ -849,16 +691,25 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
     }
   };
 
-  if (!authed) {
+  if (status === "loading") {
+    return <div className="adm"><div className="wrap"><div className="empty">Checking your session…</div></div></div>;
+  }
+
+  // Real authorisation now: the server rejects these endpoints for anyone
+  // without an ADMIN role, so this is just the matching UI.
+  if (!isAdmin) {
     return (
       <div className="adm"><div className="wrap"><div className="gate">
         <div className="glock"><Lock /></div>
         <h2>Coach Login</h2>
-        <p>This dashboard is for Ignition staff. Enter your access code to manage bookings.</p>
-        <div className="field"><input value={pass} onChange={(e) => setPass(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && pass === "ignite" && setAuthed(true)} placeholder="Access code" style={{ textAlign: "center", letterSpacing: ".3em" }} /></div>
-        <button className="btn btn-primary" style={{ width: "100%" }} disabled={pass !== "ignite"} onClick={() => setAuthed(true)}>Enter Dashboard</button>
-        <div className="hint">demo access code: <b style={{ color: "var(--ember2)" }}>ignite</b></div>
+        <p>
+          {user
+            ? "This dashboard is for Ignition staff. Your account doesn't have coach access."
+            : "This dashboard is for Ignition staff. Sign in with your coach account to manage bookings."}
+        </p>
+        {user
+          ? <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => signOut({ callbackUrl: "/" })}>Sign out</button>
+          : <a className="btn btn-primary" style={{ width: "100%" }} href="/login?next=/">Sign In</a>}
       </div></div></div>
     );
   }
@@ -886,7 +737,7 @@ function Admin({ bookings, updateBooking, leads, loaded }) {
     <div className="adm"><div className="wrap">
       <div className="adm-top">
         <h1>Bookings Dashboard<small>IGNITION FITNESS · COACH MIKE</small></h1>
-        <button className="btn btn-ghost" onClick={() => setAuthed(false)}>Sign out</button>
+        <button className="btn btn-ghost" onClick={() => signOut({ callbackUrl: "/" })}>Sign out</button>
       </div>
 
       <div className="kpis">

@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { HttpError, serializableTx, jsonError } from "@/lib/tx";
 import { isBlocked } from "@/lib/availability";
 import { minuteOfDay, studioNow } from "@/lib/config";
+import { currentUser, requireAdmin } from "@/lib/auth-helpers";
 import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
@@ -15,21 +16,35 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Phase 1 accepts the prototype's single-booking shape so the existing wizard
-// keeps working untouched. The multi-session cart (spec section 6) arrives in
-// Phase 3 and will add an `items[]` form alongside this one.
-const CreateBooking = z.object({
+// Two accepted shapes:
+//  - cart   { items: [{sessionId}], contact?, isDropIn? }   (members and guests)
+//  - legacy { name, email, phone, classType, date, time }   (kept working)
+const Contact = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email is required"),
   phone: z.string().trim().optional().default(""),
+});
+
+const CartBooking = z.object({
+  items: z
+    .array(z.object({ sessionId: z.string().min(1) }))
+    .min(1, "Pick at least one session")
+    .max(20, "That's too many sessions in one go"),
+  contact: Contact.partial().optional(),
+  isDropIn: z.boolean().optional().default(false),
+});
+
+const LegacyBooking = Contact.extend({
   classType: z.enum(["group", "pt"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   time: z.string().min(1),
   isDropIn: z.boolean().optional().default(false),
 });
 
+/** Admin list. */
 export async function GET(request) {
   try {
+    await requireAdmin();
     const prisma = getPrisma();
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
@@ -58,85 +73,163 @@ export async function GET(request) {
   }
 }
 
+/** Resolve or materialise the session a legacy payload refers to. */
+async function resolveLegacySession(tx, { classType, date: isoDay, time }) {
+  const type = CLASS_TYPE_TO_DB[classType];
+  const date = dateOnly(isoDay);
+  const startTime = to24h(time);
+
+  const existing = await tx.classSession.findUnique({
+    where: { date_startTime_type: { date, startTime, type } },
+  });
+  if (existing) return existing;
+
+  const template = await tx.weeklyTemplate.findFirst({
+    where: { dayOfWeek: date.getUTCDay(), startTime, type, active: true },
+  });
+  return tx.classSession.create({
+    data: {
+      date,
+      startTime,
+      type,
+      capacity: template?.capacity ?? DEFAULT_CAPACITY[type],
+      durationMin: template?.durationMin ?? 60,
+    },
+  });
+}
+
+/**
+ * Book one session inside an open transaction. Every guard lives here so the
+ * cart and legacy paths cannot diverge.
+ */
+async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
+  const isoDay = new Date(session.date).toISOString().slice(0, 10);
+  const now = studioNow();
+
+  if (session.status === "CANCELLED") {
+    throw new HttpError(409, "That session has been cancelled.");
+  }
+  if (isoDay < now.isoDay || (isoDay === now.isoDay && minuteOfDay(session.startTime) <= now.minutes)) {
+    throw new HttpError(409, "That session has already started.");
+  }
+
+  const blocks = await tx.availabilityBlock.findMany({ where: { date: session.date } });
+  if (isBlocked(isoDay, session.startTime, blocks)) {
+    throw new HttpError(409, "That time is not available for booking.");
+  }
+
+  // Don't let one person take two seats in the same class.
+  const dupe = await tx.booking.findFirst({
+    where: { sessionId: session.id, email, status: { not: "CANCELLED" } },
+  });
+  if (dupe) throw new HttpError(409, `You already have a spot at ${session.startTime} that day.`);
+
+  const taken = await tx.booking.count({
+    where: { sessionId: session.id, status: { not: "CANCELLED" } },
+  });
+  if (taken >= session.capacity) throw new HttpError(409, "That session is full.");
+
+  // Spend a package credit when the member has one of the right type.
+  // Credit change and its log entry are written together, inside this transaction.
+  let memberPackageId = null;
+  let paymentStatus = "UNPAID";
+  if (userId) {
+    const pack = await tx.memberPackage.findFirst({
+      where: { userId, type: session.type, active: true, creditsRemaining: { gt: 0 } },
+      orderBy: { createdAt: "asc" }, // spend the oldest pack first
+    });
+    if (pack) {
+      await tx.memberPackage.update({
+        where: { id: pack.id },
+        data: { creditsRemaining: { decrement: 1 } },
+      });
+      await tx.packageLog.create({
+        data: { memberPackageId: pack.id, delta: -1, reason: "booking" },
+      });
+      memberPackageId = pack.id;
+      paymentStatus = "PACKAGE";
+    }
+  }
+
+  return tx.booking.create({
+    data: {
+      ref: makeRef(),
+      sessionId: session.id,
+      userId: userId ?? null,
+      name,
+      email,
+      phone: phone || null,
+      isDropIn,
+      status: "CONFIRMED",
+      paymentStatus,
+      memberPackageId,
+    },
+    include: { session: true },
+  });
+}
+
 export async function POST(request) {
   try {
     const prisma = getPrisma();
     const body = await request.json();
-    const parsed = CreateBooking.safeParse(body);
-    if (!parsed.success) {
-      throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid booking");
-    }
-    const input = parsed.data;
+    const user = await currentUser();
 
-    const type = CLASS_TYPE_TO_DB[input.classType];
-    const date = dateOnly(input.date);
-    const startTime = to24h(input.time);
+    // Signed-in members book under their own account; their profile wins over
+    // whatever the browser posted, so one member can't book as someone else.
+    const identity = user
+      ? { name: user.name, email: user.email, phone: body?.contact?.phone ?? "", userId: user.id }
+      : null;
 
-    // A slot that has already started is never bookable, whatever the client says.
-    const now = studioNow();
-    if (
-      input.date < now.isoDay ||
-      (input.date === now.isoDay && minuteOfDay(startTime) <= now.minutes)
-    ) {
-      throw new HttpError(409, "That session has already started.");
-    }
+    const created = await serializableTx(prisma, async (tx) => {
+      if (Array.isArray(body?.items)) {
+        const parsed = CartBooking.safeParse(body);
+        if (!parsed.success) {
+          throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid booking");
+        }
+        const { items, contact, isDropIn } = parsed.data;
 
-    const booking = await serializableTx(prisma, async (tx) => {
-      // Find the concrete slot, or materialise it from the weekly template.
-      let session = await tx.classSession.findUnique({
-        where: { date_startTime_type: { date, startTime, type } },
-      });
+        let who = identity;
+        if (!who) {
+          const guest = Contact.safeParse(contact ?? {});
+          if (!guest.success) {
+            throw new HttpError(400, guest.error.issues[0]?.message ?? "Contact details are required");
+          }
+          who = { ...guest.data, email: guest.data.email.toLowerCase(), userId: null };
+        }
 
-      if (!session) {
-        const template = await tx.weeklyTemplate.findFirst({
-          where: { dayOfWeek: date.getUTCDay(), startTime, type, active: true },
-        });
-        session = await tx.classSession.create({
-          data: {
-            date,
-            startTime,
-            type,
-            capacity: template?.capacity ?? DEFAULT_CAPACITY[type],
-            durationMin: template?.durationMin ?? 60,
-          },
-        });
+        const ids = [...new Set(items.map((i) => i.sessionId))];
+        const sessions = await tx.classSession.findMany({ where: { id: { in: ids } } });
+        if (sessions.length !== ids.length) {
+          throw new HttpError(404, "One of those sessions no longer exists.");
+        }
+        // Book in schedule order so error messages name the earliest problem.
+        sessions.sort((a, b) =>
+          a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date - b.date
+        );
+
+        const out = [];
+        for (const s of sessions) out.push(await bookOne(tx, s, { ...who, isDropIn }));
+        return out;
       }
 
-      if (session.status === "CANCELLED") {
-        throw new HttpError(409, "That session has been cancelled.");
+      const parsed = LegacyBooking.safeParse(body);
+      if (!parsed.success) {
+        throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid booking");
       }
-
-      // Enforce blocks server-side: the wizard hides blocked slots, but a
-      // direct API call (or a stale page) must not slip through.
-      const blocks = await tx.availabilityBlock.findMany({ where: { date } });
-      if (isBlocked(input.date, startTime, blocks)) {
-        throw new HttpError(409, "That time is not available for booking.");
-      }
-
-      // Re-read the count inside the serializable transaction — this is the
-      // check that actually prevents overbooking.
-      const taken = await tx.booking.count({
-        where: { sessionId: session.id, status: { not: "CANCELLED" } },
-      });
-      if (taken >= session.capacity) {
-        throw new HttpError(409, "That session is full.");
-      }
-
-      return tx.booking.create({
-        data: {
-          ref: makeRef(),
-          sessionId: session.id,
-          name: input.name,
-          email: input.email.toLowerCase(),
-          phone: input.phone || null,
-          isDropIn: input.isDropIn,
-          status: "CONFIRMED",
-        },
-        include: { session: true },
-      });
+      const input = parsed.data;
+      const who = identity ?? {
+        name: input.name,
+        email: input.email.toLowerCase(),
+        phone: input.phone,
+        userId: null,
+      };
+      const session = await resolveLegacySession(tx, input);
+      return [await bookOne(tx, session, { ...who, isDropIn: input.isDropIn })];
     });
 
-    return Response.json(toClientBooking(booking), { status: 201 });
+    const shaped = created.map(toClientBooking);
+    // Legacy callers expect a single object back; cart callers get the array.
+    return Response.json(Array.isArray(body?.items) ? shaped : shaped[0], { status: 201 });
   } catch (err) {
     return jsonError(err);
   }

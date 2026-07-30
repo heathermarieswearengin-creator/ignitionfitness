@@ -2,10 +2,9 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { dateOnly, toIsoDay } from "@/lib/shape";
+import { requireAdmin } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
-
-// TODO(Phase 3): gate behind session.user.role === "ADMIN" once Auth.js lands.
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -36,6 +35,7 @@ const toClient = (b) => ({
 
 export async function GET(request) {
   try {
+    await requireAdmin();
     const prisma = getPrisma();
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
@@ -60,6 +60,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    await requireAdmin();
     const prisma = getPrisma();
     const parsed = CreateBlock.safeParse(await request.json());
     if (!parsed.success) {

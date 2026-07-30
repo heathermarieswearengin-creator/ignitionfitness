@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { toClientLead } from "@/lib/shape";
+import { requireAdmin } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,10 @@ const CreateLead = z.object({
   source: z.string().trim().default("web"),
 });
 
+// Admin only — the capture form below (POST) stays public.
 export async function GET() {
   try {
+    await requireAdmin();
     const prisma = getPrisma();
     const leads = await prisma.lead.findMany({ orderBy: { createdAt: "asc" } });
     return Response.json(leads.map(toClientLead));

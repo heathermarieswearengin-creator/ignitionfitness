@@ -1,11 +1,12 @@
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
+import { requireAdmin } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
-// TODO(Phase 3): gate behind session.user.role === "ADMIN" once Auth.js lands.
 export async function DELETE(_request, { params }) {
   try {
+    await requireAdmin();
     const prisma = getPrisma();
     const { id } = await params;
 
