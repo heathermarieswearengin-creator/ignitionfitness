@@ -5,6 +5,7 @@ import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
 import { Theme } from "@/app/theme";
 import { AdminCalendar } from "@/app/admin-calendar";
+import { AdminPackages } from "@/app/admin-packages";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -751,7 +752,7 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
       </div>
 
       <div className="filters" style={{ marginBottom: 18 }}>
-        {[["calendar", "Calendar"], ["list", "Bookings List"]].map(([k, l]) => (
+        {[["calendar", "Calendar"], ["list", "Bookings List"], ["packages", "Members & Packages"]].map(([k, l]) => (
           <button key={k} className={"fbtn" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -762,7 +763,13 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
         </div>
       )}
 
-      <div className="adm-grid" style={tab === "calendar" ? { gridTemplateColumns: "1fr" } : undefined}>
+      {tab === "packages" && (
+        <div style={{ marginBottom: 18 }}>
+          <AdminPackages />
+        </div>
+      )}
+
+      <div className="adm-grid" style={tab !== "list" ? { gridTemplateColumns: "1fr" } : undefined}>
         {tab === "list" && (
         <div className="panel">
           <div className="panel-h"><h3>Bookings</h3><span className="cnt">{filtered.length} shown</span></div>

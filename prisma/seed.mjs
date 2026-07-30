@@ -41,13 +41,15 @@ const PT_SLOTS = {
   5: ["16:00"],
 };
 
-// Prices mirror the pricing cards in app/page.jsx (~lines 544-567).
+// Prices mirror the pricing cards in app/page.jsx.
+// "Biweekly Unlimited" is time-based, not credit-based: it grants unlimited
+// group classes for 14 days rather than draining a credit count.
 const PACKAGES = [
-  { name: "Drop-In", type: "GROUP", totalCredits: 1, price: 25 },
-  { name: "Biweekly Unlimited", type: "GROUP", totalCredits: 999, price: 75 },
-  { name: "1:1 Single Session", type: "PT", totalCredits: 1, price: 80 },
-  { name: "1:1 8-Session Pack", type: "PT", totalCredits: 8, price: 560 },
-  { name: "1:1 12-Session Pack", type: "PT", totalCredits: 12, price: 780 },
+  { name: "Drop-In", type: "GROUP", totalCredits: 1, price: 25, unlimited: false, durationDays: null },
+  { name: "Biweekly Unlimited", type: "GROUP", totalCredits: 0, price: 75, unlimited: true, durationDays: 14 },
+  { name: "1:1 Single Session", type: "PT", totalCredits: 1, price: 80, unlimited: false, durationDays: null },
+  { name: "1:1 8-Session Pack", type: "PT", totalCredits: 8, price: 560, unlimited: false, durationDays: null },
+  { name: "1:1 12-Session Pack", type: "PT", totalCredits: 12, price: 780, unlimited: false, durationDays: null },
 ];
 
 async function main() {

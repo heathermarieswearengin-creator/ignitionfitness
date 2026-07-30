@@ -101,11 +101,16 @@ model Booking {
 
 // Package definition (catalog)
 model Package {
-  id             String          @id @default(cuid())
-  name           String // "8 Group Sessions"
-  type           SessionType
-  totalCredits   Int
-  price          Int // whole dollars
+  id           String      @id @default(cuid())
+  name         String // "8 Group Sessions"
+  type         SessionType
+  totalCredits Int // ignored when `unlimited`
+  price        Int // whole dollars
+  // Time-based memberships (e.g. "Biweekly Unlimited", $75 / 2 weeks) don't
+  // draw down a credit count — they grant access for durationDays instead.
+  unlimited    Boolean     @default(false)
+  durationDays Int? // validity window applied at assignment time
+
   active         Boolean         @default(true)
   createdAt      DateTime        @default(now())
   memberPackages MemberPackage[]
@@ -117,7 +122,11 @@ model MemberPackage {
   user             User         @relation(fields: [userId], references: [id])
   userId           String
   type             SessionType
-  creditsRemaining Int
+  creditsRemaining Int // stays 0 and unused when `unlimited`
+  // Mirrors Package.unlimited at assignment time so changing the catalog
+  // later never retroactively alters what a member was actually sold.
+  unlimited        Boolean      @default(false)
+  expiresAt        DateTime? // null = never expires
   source           Package?     @relation(fields: [packageId], references: [id])
   packageId        String?
   active           Boolean      @default(true)

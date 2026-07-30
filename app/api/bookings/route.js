@@ -4,6 +4,7 @@ import { HttpError, serializableTx, jsonError } from "@/lib/tx";
 import { isBlocked } from "@/lib/availability";
 import { minuteOfDay, studioNow } from "@/lib/config";
 import { currentUser, requireAdmin } from "@/lib/auth-helpers";
+import { spendPackageCredit } from "@/lib/packages";
 import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
@@ -129,27 +130,12 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
   });
   if (taken >= session.capacity) throw new HttpError(409, "That session is full.");
 
-  // Spend a package credit when the member has one of the right type.
-  // Credit change and its log entry are written together, inside this transaction.
-  let memberPackageId = null;
-  let paymentStatus = "UNPAID";
-  if (userId) {
-    const pack = await tx.memberPackage.findFirst({
-      where: { userId, type: session.type, active: true, creditsRemaining: { gt: 0 } },
-      orderBy: { createdAt: "asc" }, // spend the oldest pack first
-    });
-    if (pack) {
-      await tx.memberPackage.update({
-        where: { id: pack.id },
-        data: { creditsRemaining: { decrement: 1 } },
-      });
-      await tx.packageLog.create({
-        data: { memberPackageId: pack.id, delta: -1, reason: "booking" },
-      });
-      memberPackageId = pack.id;
-      paymentStatus = "PACKAGE";
-    }
-  }
+  // Spend against a package when the member has a usable one. Credit change
+  // and its log entry are written together, inside this transaction.
+  const { memberPackageId, paymentStatus } = await spendPackageCredit(tx, {
+    userId,
+    type: session.type,
+  });
 
   return tx.booking.create({
     data: {

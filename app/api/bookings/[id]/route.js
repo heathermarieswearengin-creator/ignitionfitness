@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError, serializableTx } from "@/lib/tx";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { STATUS_TO_DB, toClientBooking } from "@/lib/shape";
+import { refundPackageCredit } from "@/lib/packages";
 
 export const dynamic = "force-dynamic";
 
@@ -26,34 +27,27 @@ export async function PATCH(request, { params }) {
       const existing = await tx.booking.findUnique({ where: { id } });
       if (!existing) throw new HttpError(404, "Booking not found");
 
-      // Cancelling a booking that consumed a credit hands the credit back —
-      // and, as always, the change and its log entry are written together.
-      const refunding =
+      // Cancelling a booking that drew on a package hands the credit back.
+      // Unlimited memberships have nothing to refund, so refundPackageCredit
+      // reports false and the booking keeps its package link.
+      const shouldRefund =
         nextStatus === "CANCELLED" &&
         existing.status !== "CANCELLED" &&
         existing.memberPackageId;
 
-      if (refunding) {
-        await tx.memberPackage.update({
-          where: { id: existing.memberPackageId },
-          data: { creditsRemaining: { increment: 1 } },
-        });
-        await tx.packageLog.create({
-          data: {
+      const refunded = shouldRefund
+        ? await refundPackageCredit(tx, {
             memberPackageId: existing.memberPackageId,
-            delta: 1,
-            reason: "cancel-refund",
-            note: `Booking ${existing.ref} cancelled`,
             adminId: admin.id,
-          },
-        });
-      }
+            note: `Booking ${existing.ref} cancelled`,
+          })
+        : false;
 
       return tx.booking.update({
         where: { id },
         data: {
           status: nextStatus,
-          ...(refunding ? { paymentStatus: "UNPAID", memberPackageId: null } : {}),
+          ...(refunded ? { paymentStatus: "UNPAID", memberPackageId: null } : {}),
         },
         include: { session: true },
       });

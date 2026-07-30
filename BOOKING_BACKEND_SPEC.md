@@ -12,7 +12,7 @@
 |---|---|
 | Database | Vercel Postgres (Neon) + **Prisma** ORM |
 | Auth | **Auth.js (NextAuth v5)**, Credentials provider, **email + password** (bcrypt). Members + one admin, separated by a `role` field. |
-| Payments | **Offline now**, schema is Stripe-ready (`Booking.paymentStatus`) — do NOT build Stripe yet. |
+| Payments | **Offline now**, schema is provider-agnostic (`Booking.paymentStatus`) — do NOT build payments yet. The studio uses **Square**, so any future integration targets Square, not Stripe. |
 | Calendar | **Resend** email with a `.ics` attachment + an **"Add to Google Calendar"** link. No Google OAuth. |
 | Members | Real accounts. Members can **book multiple sessions** in one flow (a cart). |
 | Framework | Keep Next.js App Router + the existing single-file UI's design tokens. Do not introduce Tailwind or a component library. |
@@ -371,4 +371,4 @@ Add to `package.json`: `"prisma": { "seed": "node prisma/seed.mjs" }` and run `n
 
 ## 10. Definition of done
 
-Bookings persist in Postgres and sync across devices; members sign up / log in and book multiple sessions at once; drop-ins book as guests and land in Leads; the admin has a weekly+monthly calendar with counts, attendee lists, and PT-vs-group colors; the coach can assign packages and add/remove credits with a full audit log; dates/hours can be blocked; and every booking sends a `.ics` invite with an Add-to-Google-Calendar link. Stripe is not built, but `paymentStatus` is ready for it.
+Bookings persist in Postgres and sync across devices; members sign up / log in and book multiple sessions at once; drop-ins book as guests and land in Leads; the admin has a weekly+monthly calendar with counts, attendee lists, and PT-vs-group colors; the coach can assign packages and add/remove credits with a full audit log; dates/hours can be blocked; and every booking sends a `.ics` invite with an Add-to-Google-Calendar link. No payment processor is built, but `paymentStatus` is ready for one (Square).
