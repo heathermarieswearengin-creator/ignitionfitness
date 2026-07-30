@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Bash(npm *)",
+      "Bash(npx prisma *)",
+      "Bash(npx next *)",
+      "Bash(npx auth *)",
+      "Bash(npx dotenv *)",
+      "Bash(node *)",
+      "Bash(vercel env *)",
+      "Bash(vercel integration *)",
+      "Bash(vercel link *)",
+      "Bash(vercel project *)",
+      "Bash(vercel whoami*)",
+      "Bash(vercel list*)",
+      "Bash(vercel inspect *)",
+      "Bash(git status*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git -c user.name=* commit *)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(git rev-parse*)",
+      "Bash(git init*)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(jq *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(which *)",
+      "Bash(pwd*)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(curl -s http://localhost*)",
+      "Bash(curl -s -X * http://localhost*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(git push*)"
+    ]
+  }
+}

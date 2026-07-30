@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: connection URLs live in prisma.config.ts (migrate) and the
+// driver adapter in lib/prisma.js (runtime) — not here.
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum SessionType {
+  GROUP
+  PT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CHECKED_IN
+  PENDING
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PACKAGE // covered by a credit
+  COMP
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role            @default(MEMBER)
+  createdAt    DateTime        @default(now())
+  bookings     Booking[]
+  packages     MemberPackage[]
+  adminLogs    PackageLog[]    @relation("AdminLogs")
+}
+
+// Recurring schedule config -> used to generate ClassSession rows
+model WeeklyTemplate {
+  id          String      @id @default(cuid())
+  dayOfWeek   Int         // 0=Sun … 6=Sat
+  startTime   String      // "06:00" (24h)
+  type        SessionType @default(GROUP)
+  capacity    Int         @default(10)
+  durationMin Int         @default(60)
+  active      Boolean     @default(true)
+}
+
+// A concrete, dated, bookable slot. This is the canonical unit the calendar queries.
+model ClassSession {
+  id          String        @id @default(cuid())
+  date        DateTime      @db.Date
+  startTime   String        // "06:00"
+  type        SessionType
+  capacity    Int
+  durationMin Int           @default(60)
+  status      SessionStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  bookings    Booking[]
+
+  @@unique([date, startTime, type])
+  @@index([date])
+}
+
+model Booking {
+  id              String         @id @default(cuid())
+  ref             String         @unique // "IGN-XXXXX"
+  session         ClassSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       String
+  user            User?          @relation(fields: [userId], references: [id])
+  userId          String? // null for guest/drop-in
+  name            String // snapshot (works for guests + members)
+  email           String
+  phone           String?
+  isDropIn        Boolean        @default(false)
+  status          BookingStatus  @default(CONFIRMED)
+  paymentStatus   PaymentStatus  @default(UNPAID)
+  memberPackage   MemberPackage? @relation(fields: [memberPackageId], references: [id])
+  memberPackageId String?
+  createdAt       DateTime       @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+// Package definition (catalog)
+model Package {
+  id             String          @id @default(cuid())
+  name           String // "8 Group Sessions"
+  type           SessionType
+  totalCredits   Int
+  price          Int // whole dollars
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  memberPackages MemberPackage[]
+}
+
+// A package assigned to a member, tracking remaining credits
+model MemberPackage {
+  id               String       @id @default(cuid())
+  user             User         @relation(fields: [userId], references: [id])
+  userId           String
+  type             SessionType
+  creditsRemaining Int
+  source           Package?     @relation(fields: [packageId], references: [id])
+  packageId        String?
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  logs             PackageLog[]
+  bookings         Booking[]
+
+  @@index([userId])
+}
+
+// Append-only audit log: every credit change (assign, manual add/remove, booking, refund)
+model PackageLog {
+  id              String        @id @default(cuid())
+  memberPackage   MemberPackage @relation(fields: [memberPackageId], references: [id], onDelete: Cascade)
+  memberPackageId String
+  delta           Int // +N added, -N removed/consumed
+  reason          String // "assigned" | "manual-add" | "manual-remove" | "booking" | "cancel-refund"
+  note            String?
+  admin           User?         @relation("AdminLogs", fields: [adminId], references: [id])
+  adminId         String?
+  createdAt       DateTime      @default(now())
+
+  @@index([memberPackageId])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String
+  phone     String?
+  source    String   @default("web") // "kb-basics" | "dropin" | "web"
+  status    String   @default("new") // "new" | "contacted" | "converted" | "dead"
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  allDay    Boolean  @default(true)
+  startTime String? // "06:00" when partial
+  endTime   String? // "12:00" when partial
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
