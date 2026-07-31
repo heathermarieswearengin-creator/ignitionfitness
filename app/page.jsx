@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
+import { googleCalendarUrl } from "@/lib/ics";
 import { Theme } from "@/app/theme";
 import { AdminCalendar } from "@/app/admin-calendar";
 import { AdminPackages } from "@/app/admin-packages";
@@ -214,11 +215,17 @@ function MySessions({ go, user, status }) {
     );
   }
 
-  const Row = ({ b }) => (
+  const Row = ({ b, upcoming }) => (
     <div className="mysess">
       <div className="ms-when">
         <div className="ms-d">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
         <div className="ms-t">{fmtDate(b.date)} · {b.time} · {b.ref}</div>
+        {upcoming && b.status !== "cancelled" && (
+          <span className="cal-links">
+            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+            <a href={`/api/bookings/${b.id}/ics`}>Download .ics</a>
+          </span>
+        )}
       </div>
       <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
     </div>
@@ -237,7 +244,7 @@ function MySessions({ go, user, status }) {
         {!loading && data.upcoming.length === 0 && (
           <div className="empty">Nothing booked yet. <button className="linkish" onClick={() => go("book")}>Book a session</button></div>
         )}
-        {data.upcoming.map((b) => <Row key={b.id} b={b} />)}
+        {data.upcoming.map((b) => <Row key={b.id} b={b} upcoming />)}
       </div>
 
       {data.past.length > 0 && (
@@ -453,8 +460,14 @@ function Booking({ addBooking, go, user }) {
         </div>
         <div className="summary" style={{ marginTop: 24, textAlign: "left" }}>
           {done.map((b) => (
-            <div className="srow" key={b.id}>
-              <span className="k">{CLASS_MAP[b.classType]?.label ?? b.classType}</span>
+            <div className="srow cal-row" key={b.id}>
+              <span className="k">
+                {CLASS_MAP[b.classType]?.label ?? b.classType}
+                <span className="cal-links">
+                  <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+                  <a href={`/api/bookings/${b.id}/ics`}>Download .ics</a>
+                </span>
+              </span>
               <span className="v">{fmtDate(b.date)} · {b.time}</span>
             </div>
           ))}

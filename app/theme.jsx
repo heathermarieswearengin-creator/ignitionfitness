@@ -319,6 +319,14 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 .cart-item .ci-type{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ember2);flex:none}
 .slot.picked{border-color:var(--gold);background:linear-gradient(150deg,rgba(240,171,51,.16),var(--f800))}
+/* calendar invite links */
+.cal-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.cal-links a{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ember2);text-decoration:none;border-bottom:1px solid rgba(240,171,51,.35);padding-bottom:1px}
+.cal-links a:hover{color:var(--bone);border-color:var(--bone)}
+.srow.cal-row{align-items:flex-start}
+.srow.cal-row .k{display:flex;flex-direction:column}
+
 /* leads */
 .badge.lead-new{background:rgba(240,171,51,.16);color:var(--gold)}
 .badge.lead-contacted{background:rgba(111,138,153,.2);color:var(--steel)}

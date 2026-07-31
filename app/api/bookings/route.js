@@ -5,6 +5,7 @@ import { isBlocked } from "@/lib/availability";
 import { minuteOfDay, studioNow } from "@/lib/config";
 import { currentUser, requireAdmin } from "@/lib/auth-helpers";
 import { spendPackageCredit } from "@/lib/packages";
+import { sendBookingConfirmation } from "@/lib/email";
 import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
@@ -249,6 +250,15 @@ export async function POST(request) {
     });
 
     const shaped = created.map(toClientBooking);
+
+    // Fire the confirmation after the transaction commits. sendBookingConfirmation
+    // never throws — a successful booking must not report failure because the
+    // mail provider is down or unconfigured.
+    const mail = await sendBookingConfirmation(shaped);
+    if (!mail.sent && mail.reason !== "no-api-key") {
+      console.warn(`[bookings] confirmation not sent (${mail.reason}) for ${shaped.map((b) => b.ref).join(", ")}`);
+    }
+
     // Legacy callers expect a single object back; cart callers get the array.
     return Response.json(Array.isArray(body?.items) ? shaped : shaped[0], { status: 201 });
   } catch (err) {
