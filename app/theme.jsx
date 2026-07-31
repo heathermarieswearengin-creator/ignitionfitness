@@ -319,6 +319,20 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 .cart-item .ci-type{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ember2);flex:none}
 .slot.picked{border-color:var(--gold);background:linear-gradient(150deg,rgba(240,171,51,.16),var(--f800))}
+/* leads */
+.badge.lead-new{background:rgba(240,171,51,.16);color:var(--gold)}
+.badge.lead-contacted{background:rgba(111,138,153,.2);color:var(--steel)}
+.badge.lead-converted{background:rgba(78,168,106,.18);color:#7fd39b}
+.badge.lead-dead{background:rgba(176,161,147,.14);color:var(--ash)}
+.lead-notes{width:100%;background:var(--f900);border:1.5px solid var(--line);border-radius:11px;
+  padding:11px 13px;color:var(--bone);font-family:var(--body);font-size:13.5px;outline:none;resize:vertical}
+.lead-notes:focus{border-color:var(--ember)}
+.lead-notes::placeholder{color:#6b5d52}
+.convert-note{margin:0 22px 14px;padding:13px 15px;border:1.5px solid var(--ember);border-radius:12px;
+  background:rgba(224,45,36,.1);font-size:13.5px;line-height:1.65}
+.convert-note code{font-family:var(--mono);font-size:13px;color:var(--ember2);
+  background:var(--f900);padding:2px 7px;border-radius:5px;letter-spacing:.04em}
+
 /* members & packages */
 .mem-row{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;
   background:none;border:none;border-bottom:1px solid var(--line);padding:14px 22px;color:var(--bone)}

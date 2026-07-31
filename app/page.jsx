@@ -6,6 +6,7 @@ import { to12h } from "@/lib/shape";
 import { Theme } from "@/app/theme";
 import { AdminCalendar } from "@/app/admin-calendar";
 import { AdminPackages } from "@/app/admin-packages";
+import { AdminLeads } from "@/app/admin-leads";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -46,14 +47,6 @@ const next14 = () => {
   return a;
 };
 
-function relTime(ts) {
-  const m = Math.floor((Date.now() - ts) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return m + "m ago";
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + "h ago";
-  return Math.floor(h / 24) + "d ago";
-}
 
 /* ---------- icons ---------- */
 const Flame = ({ s = 18 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 2c1 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C9 9 9 11 11 11c1.5 0 2-1.5 1-4 .5.5 0 0 0-5z" fill="currentColor"/><path d="M12 22a6 6 0 0 0 6-6c0-2-1-4-2.5-5.5C16 13 14.5 14 13 14c-2.5 0-3-2.5-2-5C8 11 6 13 6 16a6 6 0 0 0 6 6z" fill="currentColor"/></svg>);
@@ -129,6 +122,13 @@ export default function App() {
     }
   };
 
+  const reloadLeads = async () => {
+    try {
+      const res = await fetch("/api/leads");
+      if (res.ok) setLeads(await res.json());
+    } catch { /* leave the current list in place */ }
+  };
+
   const addLead = async (email, source) => {
     try {
       const res = await fetch("/api/leads", {
@@ -153,7 +153,7 @@ export default function App() {
       {view === "home" && <Home go={go} addLead={addLead} />}
       {view === "book" && <Booking addBooking={addBooking} go={go} user={user} />}
       {view === "mine" && <MySessions go={go} user={user} status={status} />}
-      {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} loaded={loaded} user={user} isAdmin={isAdmin} status={status} />}
+      {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} reloadLeads={reloadLeads} loaded={loaded} user={user} isAdmin={isAdmin} status={status} />}
       {view !== "admin" && <Footer go={go} />}
     </div>
   );
@@ -635,7 +635,7 @@ const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontS
 function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.getUTCDay()]}, ${MON[x.getUTCMonth()]} ${x.getUTCDate()}`; }
 
 /* ---------- admin ---------- */
-function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }) {
+function Admin({ bookings, updateBooking, leads, reloadLeads, loaded, user, isAdmin, status }) {
   const [tab, setTab] = useState("calendar");
   const [fStatus, setFStatus] = useState("all");
   const [fWhen, setFWhen] = useState("upcoming");
@@ -884,17 +884,7 @@ function Admin({ bookings, updateBooking, leads, loaded, user, isAdmin, status }
           ))}
         </div>
 
-        <div className="panel">
-          <div className="panel-h"><h3>Leads</h3><span className="cnt">{leads.length} captured</span></div>
-          {leads.length === 0 && <div className="empty">No leads yet. The free-guide form feeds this list.</div>}
-          {[...leads].sort((a, b) => b.createdAt - a.createdAt).map((l) => (
-            <div className="lead-row" key={l.id}>
-              <div className="le">{l.email}</div>
-              <span className="lsrc">{l.source}</span>
-              <span className="ld">{relTime(l.createdAt)}</span>
-            </div>
-          ))}
-        </div>
+        <AdminLeads leads={leads} reload={reloadLeads} />
         </div>
       </div>
     </div></div>

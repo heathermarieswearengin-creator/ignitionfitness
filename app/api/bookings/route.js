@@ -154,6 +154,36 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
   });
 }
 
+/**
+ * Someone booking without an account is a drop-in, and a drop-in is a lead to
+ * follow up with. Recorded in the same transaction as the booking so the two
+ * can never disagree. Members are not leads.
+ */
+async function captureDropInLead(tx, who) {
+  if (who.userId) return;
+  const existing = await tx.lead.findFirst({ where: { email: who.email } });
+  if (existing) {
+    // Keep the richer details if we now have them, but never clobber a status
+    // the coach has already set.
+    await tx.lead.update({
+      where: { id: existing.id },
+      data: {
+        name: existing.name ?? who.name ?? null,
+        phone: existing.phone ?? who.phone ?? null,
+      },
+    });
+    return;
+  }
+  await tx.lead.create({
+    data: {
+      email: who.email,
+      name: who.name ?? null,
+      phone: who.phone || null,
+      source: "dropin",
+    },
+  });
+}
+
 export async function POST(request) {
   try {
     const prisma = getPrisma();
@@ -193,8 +223,11 @@ export async function POST(request) {
           a.date === b.date ? a.startTime.localeCompare(b.startTime) : a.date - b.date
         );
 
+        // A guest booking is a drop-in unless the caller says otherwise.
+        const dropIn = isDropIn || !who.userId;
         const out = [];
-        for (const s of sessions) out.push(await bookOne(tx, s, { ...who, isDropIn }));
+        for (const s of sessions) out.push(await bookOne(tx, s, { ...who, isDropIn: dropIn }));
+        await captureDropInLead(tx, who);
         return out;
       }
 
@@ -210,7 +243,9 @@ export async function POST(request) {
         userId: null,
       };
       const session = await resolveLegacySession(tx, input);
-      return [await bookOne(tx, session, { ...who, isDropIn: input.isDropIn })];
+      const made = [await bookOne(tx, session, { ...who, isDropIn: input.isDropIn || !who.userId })];
+      await captureDropInLead(tx, who);
+      return made;
     });
 
     const shaped = created.map(toClientBooking);
