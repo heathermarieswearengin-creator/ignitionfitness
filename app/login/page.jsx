@@ -58,6 +58,9 @@ function LoginForm() {
           {busy ? "Signing in…" : "Sign In"}
         </button>
         <div className="hint">
+          <a href="/forgot" style={{ color: "var(--ember2)" }}>Forgot your password?</a>
+        </div>
+        <div className="hint" style={{ marginTop: 6 }}>
           No account? <a href="/signup" style={{ color: "var(--ember2)" }}>Create one</a>
           {" · "}
           <a href="/" style={{ color: "var(--ash)" }}>Back to site</a>

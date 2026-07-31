@@ -93,13 +93,15 @@ export function AdminLeads({ leads, reload }) {
         <div className="convert-note">
           <strong>{converted.email}</strong> is now a member.
           {converted.adoptedBookings > 0 && ` ${converted.adoptedBookings} earlier booking${converted.adoptedBookings === 1 ? "" : "s"} moved onto their account.`}
-          {converted.tempPassword ? (
-            <>
-              <br />Temporary password — shown once, share it with them:{" "}
-              <code>{converted.tempPassword}</code>
-            </>
-          ) : (
+          {converted.alreadyHadAccount ? (
             <><br />They already had an account, so their existing password still works.</>
+          ) : converted.setPasswordEmailSent ? (
+            <><br />We emailed them a link to set their own password. It's good for 7 days.</>
+          ) : (
+            <>
+              <br />Email isn't configured, so read them this temporary password —
+              shown once, and they should change it: <code>{converted.tempPassword}</code>
+            </>
           )}
           <button className="linkish" style={{ marginLeft: 10 }} onClick={() => setConverted(null)}>dismiss</button>
         </div>

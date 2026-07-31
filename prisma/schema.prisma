@@ -48,6 +48,23 @@ model User {
   bookings     Booking[]
   packages     MemberPackage[]
   adminLogs    PackageLog[]    @relation("AdminLogs")
+  resetTokens  PasswordResetToken[]
+}
+
+// Single-use, short-lived password reset tokens.
+// Only the SHA-256 hash is stored: a leaked database must not hand an attacker
+// working reset links, exactly as with passwords themselves.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Recurring schedule config -> used to generate ClassSession rows
