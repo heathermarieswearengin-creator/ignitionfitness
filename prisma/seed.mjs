@@ -108,6 +108,13 @@ async function main() {
   console.log(`packages: ${PACKAGES.length} catalog entries`);
 
   // ---- demo member with an assigned package, so admin views aren't empty ----
+  // Opt-in only: re-seeding a live database must never reintroduce fake
+  // members. Run with SEED_DEMO=true when you want sample data.
+  if (process.env.SEED_DEMO !== "true") {
+    console.log("demo member: skipped (set SEED_DEMO=true to create one)");
+    return;
+  }
+
   const demoEmail = "sarah.m@email.com";
   const demo = await prisma.user.upsert({
     where: { email: demoEmail },
