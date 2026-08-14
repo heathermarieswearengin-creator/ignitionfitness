@@ -162,29 +162,57 @@ export default function App() {
 
 /* ---------- nav ---------- */
 function Nav({ view, go, user, isAdmin }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobile = () => setMobileOpen(false);
+  const navTo = (v) => { go(v); closeMobile(); };
+  
   return (
-    <nav className="nav">
-      <div className="wrap nav-in">
-        <button className="logo" onClick={() => go("home")}>
-          <Logo h={52} />
-        </button>
-        <div className="nav-links">
-          <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => go("home")}>HOME</button>
-          <button className="nlink" onClick={() => go("home")}>OUR STORY</button>
-          <button className="nlink" onClick={() => go("home")}>PRICING</button>
-          {user && (
-            <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => go("mine")}>MY SESSIONS</button>
-          )}
-          {isAdmin && (
-            <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => go("admin")}>ADMIN</button>
-          )}
-          {user
-            ? <button className="nlink" onClick={() => signOut({ callbackUrl: "/" })}>SIGN OUT</button>
-            : <a className="nlink" href="/login">SIGN IN</a>}
-          <button className="btn btn-primary" onClick={() => go("book")} style={{ marginLeft: 8 }}>Book a Class</button>
+    <>
+      <nav className="nav">
+        <div className="wrap nav-in">
+          <button className="logo" onClick={() => navTo("home")}>
+            <Logo h={52} />
+          </button>
+          <div className="nav-links">
+            <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
+            <button className="nlink" onClick={() => navTo("home")}>OUR STORY</button>
+            <button className="nlink" onClick={() => navTo("home")}>PRICING</button>
+            {user && (
+              <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
+            )}
+            {isAdmin && (
+              <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => navTo("admin")}>ADMIN</button>
+            )}
+            {user
+              ? <button className="nlink" onClick={() => { signOut({ callbackUrl: "/" }); closeMobile(); }}>SIGN OUT</button>
+              : <a className="nlink" href="/login">SIGN IN</a>}
+            <button className="btn btn-primary" onClick={() => navTo("book")} style={{ marginLeft: 8 }}>Book a Class</button>
+          </div>
+          <button className="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
+            {mobileOpen ? (
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M6 18L18 6"/></svg>
+            ) : (
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            )}
+          </button>
         </div>
+      </nav>
+      <div className={"mobile-nav" + (mobileOpen ? " open" : "")}>
+        <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
+        <button className="nlink" onClick={() => navTo("home")}>OUR STORY</button>
+        <button className="nlink" onClick={() => navTo("home")}>PRICING</button>
+        {user && (
+          <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
+        )}
+        {isAdmin && (
+          <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => navTo("admin")}>ADMIN</button>
+        )}
+        {user
+          ? <button className="nlink" onClick={() => { signOut({ callbackUrl: "/" }); closeMobile(); }}>SIGN OUT</button>
+          : <a className="nlink" href="/login">SIGN IN</a>}
+        <button className="btn btn-primary" onClick={() => navTo("book")} style={{ marginTop: 12, width: "100%" }}>Book a Class</button>
       </div>
-    </nav>
+    </>
   );
 }
 
@@ -590,16 +618,16 @@ function Booking({ addBooking, go, user }) {
                   <div className="srow"><span className="k">Email</span><span className="v">{user.email}</span></div>
                 </div>
                 <div className="field"><label>Phone (optional)</label>
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
               </>
             ) : (
               <>
                 <div className="field"><label>Full name</label>
                   <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
                 <div className="field"><label>Email</label>
-                  <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
+                  <input type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
                 <div className="field"><label>Phone</label>
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
                 <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>
                   Booking as a guest. <a href="/signup" style={{ color: "var(--ember2)" }}>Create an account</a> to track your sessions.
                 </p>
@@ -935,7 +963,7 @@ function LeadMagnet({ addLead }) {
             <>
               <div className="ttl">Get It Free</div>
               <div className="sub">Drop your email and we'll send the PDF straight over.</div>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com"
+              <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com"
                 onKeyDown={(e) => e.key === "Enter" && submit()} />
               <button className="btn btn-primary" style={{ width: "100%" }} disabled={!valid} onClick={submit}>Send Me The Guide</button>
               <div className="privacy">No spam, ever. Unsubscribe anytime.</div>

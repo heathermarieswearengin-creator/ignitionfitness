@@ -67,7 +67,7 @@ export default function SignupPage() {
           <input type="email" value={form.email} placeholder="you@email.com" autoComplete="email" onChange={set("email")} />
         </div>
         <div className="field">
-          <input value={form.phone} placeholder="Phone (optional)" autoComplete="tel" onChange={set("phone")} />
+          <input type="tel" inputMode="tel" value={form.phone} placeholder="Phone (optional)" autoComplete="tel" onChange={set("phone")} />
         </div>
         <div className="field">
           <input type="password" value={form.password} placeholder="Password (8+ characters)"

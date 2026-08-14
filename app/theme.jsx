@@ -25,10 +25,10 @@ const CSS = `
 .logo-word b{color:var(--gold);font-weight:400}
 .nav-links{display:flex;align-items:center;gap:6px}
 .nlink{background:none;border:none;color:var(--ash);font-family:var(--mono);font-size:12px;
-  letter-spacing:.08em;font-weight:500;padding:9px 13px;cursor:pointer;border-radius:7px;transition:.18s}
+  letter-spacing:.08em;font-weight:500;padding:12px 14px;cursor:pointer;border-radius:7px;transition:.18s;min-height:44px}
 .nlink:hover{color:var(--bone);background:var(--f800)}
 .nlink.on{color:var(--ember2)}
-.btn{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:12.5px;cursor:pointer;
+.btn{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:12.5px;cursor:pointer;min-height:44px;
   border:none;border-radius:9px;padding:12px 20px;transition:.2s;text-transform:uppercase}
 .btn-primary{background:linear-gradient(150deg,var(--flame),var(--ember));color:#fff;
   box-shadow:0 8px 26px rgba(224,45,36,.32)}
@@ -180,7 +180,7 @@ h2.sh{font-family:var(--display);font-size:clamp(32px,5vw,58px);line-height:.98;
 .field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ash);
   text-transform:uppercase;margin-bottom:7px}
 .field input{width:100%;background:var(--f800);border:1.5px solid var(--line);border-radius:11px;
-  padding:13px 15px;color:var(--bone);font-family:var(--body);font-size:15px;outline:none;transition:.16s}
+  padding:13px 15px;color:var(--bone);font-family:var(--body);font-size:16px;outline:none;transition:.16s;min-height:48px}
 .field input:focus{border-color:var(--ember)}
 .field input::placeholder{color:#6b5d52}
 
@@ -415,7 +415,18 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 .cal-sheet{background:var(--f900);border:1.5px solid var(--line);border-radius:16px;
   width:100%;max-width:620px;overflow:hidden}
 
-@media(max-width:860px){
+@media(max-width:860px){\
+  .wrap{padding:0 16px}\
+  .nav-in{height:64px}\
+  .hero{padding:40px 0 50px}\
+  .hero-logo{height:100px}\
+  .section{padding:50px 0}\
+  .card{padding:24px 18px}\
+  .book-row{padding:12px 16px;gap:10px}\
+  .panel-h{padding:14px 16px}\
+  .datechip{width:64px;padding:10px 0}\
+  .datechip .dnum{font-size:22px}\
+
   .cal-week{grid-template-columns:1fr;gap:7px}
   .cal-day{min-height:0}
   .cal-title{margin-left:0;width:100%}
@@ -436,6 +447,48 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .kpis{grid-template-columns:1fr 1fr}
   .adm-grid{grid-template-columns:1fr}
   .lead{grid-template-columns:1fr;padding:32px 24px;gap:28px}
+}
+
+/* Mobile menu toggle */
+.mobile-menu-btn{display:none;background:none;border:none;padding:10px;cursor:pointer;color:var(--bone);
+  min-height:44px;min-width:44px}
+.mobile-nav{display:none;position:fixed;top:64px;left:0;right:0;bottom:0;background:var(--black);
+  z-index:49;padding:24px;flex-direction:column;gap:8px;overflow-y:auto}
+.mobile-nav.open{display:flex}
+.mobile-nav .nlink{display:block;width:100%;text-align:left;padding:14px 16px;font-size:14px}
+
+@media(max-width:860px){
+  .mobile-menu-btn{display:grid;place-items:center}
+}
+
+/* Extra small screens */
+@media(max-width:400px){
+  .wrap{padding:0 12px}
+  .stats{grid-template-columns:1fr}
+  .stat{padding:18px 14px}
+  .stat .n{font-size:30px}
+  .kpis{grid-template-columns:1fr}
+  .hero-h{font-size:36px}
+  .opt{padding:16px;gap:12px}
+  .opt .oicon{width:40px;height:40px}
+  .opt .otitle{font-size:17px}
+  .opt .oprice{font-size:22px}
+  .slot-grid{grid-template-columns:1fr 1fr}
+  .slot{padding:12px 10px}
+  .slot .stime{font-size:16px}
+  .field input{padding:12px 14px}
+  .btn{padding:12px 16px;font-size:12px}
+  .nav-btns{flex-direction:column}
+  .nav-btns .btn{width:100%}
+  .eyebrow{font-size:10px;padding:7px 14px}
+  .hero-sub{font-size:15px}
+  .band{padding:40px 24px;border-radius:16px}
+  .band h2{font-size:28px}
+  .foot-grid{gap:28px}
+  .cart-bar{padding:12px 14px;gap:10px}
+  .cal-links{gap:10px}
+  .cal-links a{font-size:9px}
+
 }
 `;
 
