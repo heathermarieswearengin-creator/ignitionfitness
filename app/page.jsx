@@ -348,7 +348,6 @@ function Home({ go, addLead }) {
         </div>
       </div></section>
 
-      <LeadMagnet addLead={addLead} />
 
       <section className="section" style={{ paddingTop: 0 }}><div className="wrap">
         <div className="kicker">Flexible Options</div>
@@ -378,6 +377,9 @@ function Home({ go, addLead }) {
             <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => go("book")}>Book a Session</button>
           </div>
         </div>
+        <p style={{ color: "var(--ash)", fontSize: 14, fontFamily: "var(--mono)", textAlign: "center", marginTop: 24, letterSpacing: ".02em" }}>
+          Payment is handled in person on the day of your session — no online payment required to book.
+        </p>
       </div></section>
 
       <section className="section" style={{ paddingTop: 0 }}><div className="wrap">
@@ -395,117 +397,84 @@ function Home({ go, addLead }) {
 function Booking({ addBooking, go, user }) {
   const [step, setStep] = useState(1);
   const [classType, setClassType] = useState(null);
-  const [date, setDate] = useState(null);
-  const [cart, setCart] = useState([]); // [{ sessionId, date, time, classType }]
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
-  const [done, setDone] = useState(null); // array of created bookings
+  const [done, setDone] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
 
-  const days = useMemo(() => next14(), []);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const now = studioNow();
+    const d = new Date(now.isoDay + "T00:00:00.000Z");
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
+  });
+
   const cls = classType ? CLASS_MAP[classType] : null;
 
-  // The schedule lives in the database. Blocked dates, cancelled sessions and
-  // times that have already passed are filtered out server-side, and the
-  // spots-left counts are authoritative.
   const reloadSlots = React.useCallback(async () => {
+    const firstDay = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
+    const lastDay = new Date(Date.UTC(viewMonth.year, viewMonth.month + 2, 0));
+    const from = firstDay.toISOString().slice(0, 10);
+    const to = lastDay.toISOString().slice(0, 10);
     try {
-      const res = await fetch("/api/availability");
+      const res = await fetch("/api/availability?from=" + from + "&to=" + to);
       setSlots(res.ok ? await res.json() : []);
-    } catch {
-      setSlots([]);
-    } finally {
-      setSlotsLoaded(true);
-    }
-  }, []);
+    } catch { setSlots([]); }
+    finally { setSlotsLoaded(true); }
+  }, [viewMonth]);
 
   useEffect(() => { reloadSlots(); }, [reloadSlots]);
+  useEffect(() => { if (user) setForm((f) => ({ ...f, name: user.name || "", email: user.email || "" })); }, [user]);
 
-  // Members book under their account; their details come from the session.
-  useEffect(() => {
-    if (user) setForm((f) => ({ ...f, name: user.name || "", email: user.email || "" }));
-  }, [user]);
-
-  const slotsFor = (d) => slots.filter((s) => s.date === d && s.classType === classType);
-  const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType);
-
-  const inCart = (sessionId) => cart.some((c) => c.sessionId === sessionId);
-  const toggleSlot = (s) =>
-    setCart((c) =>
-      c.some((x) => x.sessionId === s.sessionId)
-        ? c.filter((x) => x.sessionId !== s.sessionId)
-        : [...c, { sessionId: s.sessionId, date: s.date, time: s.time, classType: s.classType }]
-    );
-
-  const cartSorted = [...cart].sort((a, b) =>
-    a.date === b.date ? toMin(a.time) - toMin(b.time) : a.date.localeCompare(b.date)
-  );
-  const total = cart.reduce((n, c) => n + (CLASS_MAP[c.classType]?.price ?? 0), 0);
+  const slotsForDate = (d) => slots.filter((s) => s.date === d && s.classType === classType);
+  const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
 
   const reset = () => {
-    setDone(null); setStep(1); setClassType(null); setDate(null);
-    setCart([]); setError(null);
+    setDone(null); setStep(1); setClassType(null); setSelectedDate(null);
+    setSelectedSlot(null); setError(null);
     setForm({ name: user?.name || "", email: user?.email || "", phone: "" });
   };
 
-  // The server assigns refs, enforces capacity and books the whole cart in one
-  // transaction — all of it lands or none of it does.
   const confirm = async () => {
-    if (saving || cart.length === 0) return;
-    setSaving(true);
-    setError(null);
+    if (saving || !selectedSlot) return;
+    setSaving(true); setError(null);
     try {
       const created = await addBooking({
-        items: cart.map((c) => ({ sessionId: c.sessionId })),
-        contact: user
-          ? { phone: form.phone.trim() }
-          : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+        items: [{ sessionId: selectedSlot.sessionId }],
+        contact: user ? { phone: form.phone.trim() } : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
       });
-      setDone(Array.isArray(created) ? created : [created]);
-      setStep(5);
-      reloadSlots();
-    } catch (e) {
-      setError(e.message || "Something went wrong. Please try again.");
-      reloadSlots(); // a slot may have filled or been blocked while they typed
-    } finally {
-      setSaving(false);
-    }
+      setDone(Array.isArray(created) ? created[0] : created);
+      setStep(5); reloadSlots();
+    } catch (e) { setError(e.message || "Something went wrong."); reloadSlots(); }
+    finally { setSaving(false); }
   };
 
   if (done) {
-    const first = done[0];
+    const price = CLASS_MAP[done.classType]?.price ?? 0;
     return (
       <div className="page"><div className="wrap"><div className="confirm">
         <div className="seal"><Check s={42} /></div>
-        <h1>{done.length > 1 ? "You're All Booked" : "You're Booked"}</h1>
-        <p style={{ color: "var(--ash)", fontSize: 16 }}>
-          See you at the bell, {first.name.split(" ")[0]}. A confirmation is on its way to {first.email}.
-        </p>
-        <div className="ref">
-          {done.length > 1 ? `${done.length} SESSIONS · ${done.map((b) => b.ref).join(" · ")}` : `CONFIRMATION · ${first.ref}`}
-        </div>
+        <h1>You're Booked</h1>
+        <p style={{ color: "var(--ash)", fontSize: 16 }}>See you at the bell, {done.name.split(" ")[0]}. A confirmation is on its way to {done.email}.</p>
+        <div className="ref">CONFIRMATION · {done.ref}</div>
         <div className="summary" style={{ marginTop: 24, textAlign: "left" }}>
-          {done.map((b) => (
-            <div className="srow cal-row" key={b.id}>
-              <span className="k">
-                {CLASS_MAP[b.classType]?.label ?? b.classType}
-                <span className="cal-links">
-                  <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
-                  <a href={`/api/bookings/${b.id}/ics`}>Download .ics</a>
-                </span>
+          <div className="srow cal-row">
+            <span className="k">{CLASS_MAP[done.classType]?.label ?? done.classType}
+              <span className="cal-links">
+                <a href={googleCalendarUrl(done)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+                <a href={"/api/bookings/" + done.id + "/ics"}>Download .ics</a>
               </span>
-              <span className="v">{fmtDate(b.date)} · {b.time}</span>
-            </div>
-          ))}
-          <div className="srow"><span className="k">Location</span><span className="v">{STUDIO.addressLine}</span></div>
-          <div className="srow total">
-            <span className="k">Due at studio</span>
-            <span className="v">${done.reduce((n, b) => n + (CLASS_MAP[b.classType]?.price ?? 0), 0)}</span>
+            </span>
+            <span className="v">{fmtDate(done.date)} · {done.time}</span>
           </div>
+          <div className="srow"><span className="k">Location</span><span className="v">{STUDIO.addressLine}</span></div>
+          <div className="srow total"><span className="k">Due at studio</span><span className="v">${price}</span></div>
         </div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
+        <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 16 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
           <button className="btn btn-ghost" onClick={() => go("home")}>Back Home</button>
           {user && <button className="btn btn-ghost" onClick={() => go("mine")}>My Sessions</button>}
           <button className="btn btn-primary" onClick={reset}>Book Another</button>
@@ -514,158 +483,113 @@ function Booking({ addBooking, go, user }) {
     );
   }
 
-  const contactOk = user
-    ? true
-    : form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7;
-  const canNext =
-    (step === 1 && classType) || (step === 2 && cart.length > 0) || (step === 3 && contactOk);
+  const contactOk = user ? true : form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7;
+  const canNext = (step === 1 && classType) || (step === 2 && selectedSlot) || (step === 3 && contactOk);
+
+  const calendarDays = useMemo(() => {
+    const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
+    const lastOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month + 1, 0));
+    const startPad = firstOfMonth.getUTCDay();
+    const totalDays = lastOfMonth.getUTCDate();
+    const days = [];
+    for (let i = 0; i < startPad; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, 1 - (startPad - i))), outside: true });
+    for (let i = 1; i <= totalDays; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, i)), outside: false });
+    while (days.length < 42) { const last = days[days.length - 1].date; days.push({ date: new Date(last.getTime() + 86400000), outside: true }); }
+    return days;
+  }, [viewMonth]);
+
+  const todayIso = studioNow().isoDay;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); setSelectedDate(null); };
+  const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); setSelectedDate(null); };
 
   return (
     <div className="page"><div className="wrap">
-      <div className="page-head">
-        <h1>Book Your Spot</h1>
-        <p>Pick your class, grab a time, and we'll see you at the studio.</p>
-      </div>
-
+      <div className="page-head"><h1>Book Your Spot</h1><p>Pick your session type, choose a date, and we'll see you at the studio.</p></div>
       <div className="steps-bar">
-        {[1, 2, 3, 4].map((n, i) => (
-          <React.Fragment key={n}>
-            <div className={"sbubble" + (step === n ? " on" : step > n ? " done" : "")}>{step > n ? <Check /> : n}</div>
-            {i < 3 && <div className={"sline" + (step > n ? " on" : "")} />}
-          </React.Fragment>
-        ))}
+        {[1, 2, 3, 4].map((n, i) => (<React.Fragment key={n}><div className={"sbubble" + (step === n ? " on" : step > n ? " done" : "")}>{step > n ? <Check /> : n}</div>{i < 3 && <div className={"sline" + (step > n ? " on" : "")} />}</React.Fragment>))}
       </div>
-
       <div className="card">
-        {step === 1 && (
-          <>
-            <SLabel>Choose your training</SLabel>
-            <div className="opt-grid">
-              {CLASSES.map((c) => (
-                <button key={c.id} className={"opt" + (classType === c.id ? " sel" : "")} onClick={() => setClassType(c.id)}>
-                  <span className="oicon">{c.id === "pt" ? <User s={22} /> : <Bell s={22} />}</span>
-                  <span><span className="otitle">{c.label}</span><span className="otag">{c.tag}</span><span className="odesc">{c.desc}</span></span>
-                  <span className="oprice">${c.price}<small>{c.id === "pt" ? "per session" : "drop-in"}</small></span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        {step === 1 && (<>
+          <SLabel>Choose your training</SLabel>
+          <div className="opt-grid">
+            {CLASSES.map((c) => (<button key={c.id} className={"opt" + (classType === c.id ? " sel" : "")} onClick={() => setClassType(c.id)}>
+              <span className="oicon">{c.id === "pt" ? <User s={22} /> : <Bell s={22} />}</span>
+              <span><span className="otitle">{c.label}</span><span className="otag">{c.tag}</span><span className="odesc">{c.desc}</span></span>
+              <span className="oprice">${c.price}<small>{c.id === "pt" ? "per session" : "drop-in"}</small></span>
+            </button>))}
+          </div>
+        </>)}
 
-        {step === 2 && (
-          <>
-            <SLabel>Pick your dates</SLabel>
-            <div className="date-row">
-              {days.map((d) => {
-                const k = iso(d); const open = dayHasSlots(k);
-                return (
-                  <button key={k} disabled={!open} className={"datechip" + (date === k ? " sel" : "")}
-                    onClick={() => setDate(k)} style={!open ? { opacity: .3, cursor: "not-allowed" } : {}}>
-                    <div className="dow">{DOW[d.getUTCDay()]}</div>
-                    <div className="dnum">{d.getUTCDate()}</div>
-                    <div className="dmo">{MON[d.getUTCMonth()]}</div>
-                  </button>
-                );
+        {step === 2 && (<>
+          <SLabel>Pick a date & time</SLabel>
+          <div className="cal-bar" style={{ padding: "0 0 16px", justifyContent: "space-between" }}>
+            <div className="cal-nav"><button className="fbtn" onClick={prevMonth}>←</button><button className="fbtn" onClick={nextMonth}>→</button></div>
+            <div className="cal-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
+          </div>
+          <div className="booking-cal">
+            <div className="booking-cal-head">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="booking-cal-dow">{d}</div>)}</div>
+            <div className="booking-cal-grid">
+              {calendarDays.map(({ date, outside }, i) => {
+                const iso = date.toISOString().slice(0, 10);
+                const isPast = iso < todayIso;
+                const hasAvail = !isPast && !outside && dayHasSlots(iso);
+                const isSelected = selectedDate === iso;
+                const isToday = iso === todayIso;
+                return (<button key={i} className={"booking-cal-day" + (outside ? " outside" : "") + (isPast ? " past" : "") + (hasAvail ? " has-slots" : "") + (isSelected ? " selected" : "") + (isToday ? " today" : "")} disabled={outside || isPast || !hasAvail} onClick={() => { setSelectedDate(iso); setSelectedSlot(null); }}>{date.getUTCDate()}</button>);
               })}
             </div>
-            {!slotsLoaded && <div className="empty-day">Loading the schedule…</div>}
-            {slotsLoaded && date ? (
-              <>
-                <SLabel>Tap every time you want</SLabel>
-                <div className="slot-grid">
-                  {slotsFor(date).map((s) => {
-                    const left = s.spotsLeft;
-                    const picked = inCart(s.sessionId);
-                    const cl = left === 0 ? "spots-none" : left <= 3 ? "spots-low" : "spots-ok";
-                    return (
-                      <button key={s.sessionId} disabled={left === 0 && !picked}
-                        className={"slot" + (picked ? " picked" : "")} onClick={() => toggleSlot(s)}>
-                        <div className="stime">{s.time}</div>
-                        <div className="stype">{(cls || CLASS_MAP[s.classType]).label}</div>
-                        <div className={"sspots " + cl}>
-                          {picked ? "Added ✓" : left === 0 ? "Full" : left + (left === 1 ? " spot left" : " spots left")}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {slotsFor(date).length === 0 && <div className="empty-day">No open times left on this date.</div>}
-              </>
-            ) : slotsLoaded ? (
-              <div className="empty-day">Select a date to see open class times.</div>
-            ) : null}
-
-            {cart.length > 0 && (
-              <div className="cart-bar">
-                <span className="cn">{cart.length}</span>
-                <span className="cl">
-                  {cart.length === 1 ? "session selected" : "sessions selected"} · ${total} due at studio
-                  <br />Pick more dates above, or continue.
-                </span>
-                <button className="btn btn-ghost" onClick={() => setCart([])}>Clear</button>
-              </div>
-            )}
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <SLabel>Your details</SLabel>
-            {user ? (
-              <>
-                <div className="summary" style={{ marginBottom: 18 }}>
-                  <div className="srow"><span className="k">Booking as</span><span className="v">{user.name}</span></div>
-                  <div className="srow"><span className="k">Email</span><span className="v">{user.email}</span></div>
-                </div>
-                <div className="field"><label>Phone (optional)</label>
-                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
-              </>
-            ) : (
-              <>
-                <div className="field"><label>Full name</label>
-                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
-                <div className="field"><label>Email</label>
-                  <input type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
-                <div className="field"><label>Phone</label>
-                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
-                <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>
-                  Booking as a guest. <a href="/signup" style={{ color: "var(--ember2)" }}>Create an account</a> to track your sessions.
-                </p>
-              </>
-            )}
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <SLabel>Review &amp; confirm</SLabel>
-            <div className="cart-list">
-              {cartSorted.map((c) => (
-                <div className="cart-item" key={c.sessionId}>
-                  <span className="ci-when">{fmtDate(c.date)} · {c.time}</span>
-                  <span className="ci-type">{CLASS_MAP[c.classType]?.label ?? c.classType}</span>
-                </div>
-              ))}
+          </div>
+          {selectedDate && (<div style={{ marginTop: 24 }}>
+            <SLabel>Available times on {fmtDate(selectedDate)}</SLabel>
+            <div className="slot-grid">
+              {slotsForDate(selectedDate).map((s) => {
+                const isSelected = selectedSlot?.sessionId === s.sessionId;
+                const isFull = s.spotsLeft === 0;
+                const spotClass = isFull ? "spots-none" : s.spotsLeft <= 3 ? "spots-low" : "spots-ok";
+                return (<button key={s.sessionId} disabled={isFull} className={"slot" + (isSelected ? " picked" : "")} onClick={() => setSelectedSlot(s)}>
+                  <div className="stime">{s.time}</div><div className="stype">{cls?.label}</div>
+                  <div className={"sspots " + spotClass}>{isSelected ? "Selected ✓" : isFull ? "Full" : classType === "pt" ? "Available" : s.booked + " of " + s.capacity + " booked"}</div>
+                </button>);
+              })}
             </div>
-            <div className="summary">
-              <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
-              <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
-              <div className="srow"><span className="k">Sessions</span><span className="v">{cart.length}</span></div>
-              <div className="srow total"><span className="k">Due at studio</span><span className="v">${total}</span></div>
-            </div>
-            <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>Payment handled in person. Cancel free up to 12 hours before.</p>
-            {error && (
-              <p style={{ color: "var(--flame)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>{error}</p>
-            )}
-          </>
-        )}
+            {slotsForDate(selectedDate).length === 0 && <div className="empty-day">No available times on this date.</div>}
+          </div>)}
+          {!slotsLoaded && <div className="empty-day" style={{ marginTop: 20 }}>Loading availability...</div>}
+          {slotsLoaded && !selectedDate && <div className="empty-day" style={{ marginTop: 20 }}>Tap a highlighted date to see available times.</div>}
+        </>)}
+
+        {step === 3 && (<>
+          <SLabel>Your details</SLabel>
+          {user ? (<>
+            <div className="summary" style={{ marginBottom: 18 }}><div className="srow"><span className="k">Booking as</span><span className="v">{user.name}</span></div><div className="srow"><span className="k">Email</span><span className="v">{user.email}</span></div></div>
+            <div className="field"><label>Phone (optional)</label><input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+          </>) : (<>
+            <div className="field"><label>Full name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
+            <div className="field"><label>Email</label><input type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
+            <div className="field"><label>Phone</label><input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
+            <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center" }}>Booking as a guest. <a href="/signup" style={{ color: "var(--ember2)" }}>Create an account</a> to track your sessions.</p>
+          </>)}
+        </>)}
+
+        {step === 4 && selectedSlot && (<>
+          <SLabel>Review & confirm</SLabel>
+          <div className="summary">
+            <div className="srow"><span className="k">Session</span><span className="v">{cls?.label}</span></div>
+            <div className="srow"><span className="k">Date</span><span className="v">{fmtDate(selectedSlot.date)}</span></div>
+            <div className="srow"><span className="k">Time</span><span className="v">{selectedSlot.time}</span></div>
+            <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
+            <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
+            <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
+          </div>
+          <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+          {error && <p style={{ color: "var(--flame)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>{error}</p>}
+        </>)}
       </div>
-
       <div className="nav-btns">
         <button className="btn btn-ghost" onClick={() => step === 1 ? go("home") : setStep(step - 1)}>{step === 1 ? "Cancel" : "Back"}</button>
-        {step < 4
-          ? <button className="btn btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}>Continue <Arrow /></button>
-          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking…" : <>Confirm {cart.length > 1 ? `${cart.length} Sessions` : "Booking"} <Check /></>}</button>}
+        {step < 4 ? <button className="btn btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}>Continue <Arrow /></button>
+          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking..." : <>Confirm Booking <Check /></>}</button>}
       </div>
     </div></div>
   );
@@ -933,48 +857,6 @@ function Admin({ bookings, updateBooking, leads, reloadLeads, loaded, user, isAd
 }
 
 /* ---------- lead magnet ---------- */
-function LeadMagnet({ addLead }) {
-  const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
-  const valid = /\S+@\S+\.\S+/.test(email);
-  const submit = () => { if (!valid) return; addLead(email.trim(), "kb-basics"); setDone(true); };
-  return (
-    <section className="section" style={{ paddingTop: 0 }}><div className="wrap">
-      <div className="lead"><div className="lead-glow" />
-        <div>
-          <div className="kicker">Free Download</div>
-          <h2>The Kettlebell<br />Basics Guide</h2>
-          <p className="lp">New to the bell? This free guide covers everything you need before your first swing. No fluff, just the fundamentals that keep you safe and strong.</p>
-          <ul>
-            <li><Check /> The 6 foundational movements, step by step</li>
-            <li><Check /> How to breathe, brace, and protect your back</li>
-            <li><Check /> A beginner workout you can do anywhere</li>
-            <li><Check /> The 5 most common mistakes, and the fixes</li>
-          </ul>
-        </div>
-        <div className="lead-form">
-          {done ? (
-            <div className="lead-done">
-              <div className="lc"><Check s={30} /></div>
-              <h4>Check Your Inbox</h4>
-              <p>Your Kettlebell Basics guide is on its way to {email}. See you at the studio.</p>
-            </div>
-          ) : (
-            <>
-              <div className="ttl">Get It Free</div>
-              <div className="sub">Drop your email and we'll send the PDF straight over.</div>
-              <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com"
-                onKeyDown={(e) => e.key === "Enter" && submit()} />
-              <button className="btn btn-primary" style={{ width: "100%" }} disabled={!valid} onClick={submit}>Send Me The Guide</button>
-              <div className="privacy">No spam, ever. Unsubscribe anytime.</div>
-            </>
-          )}
-        </div>
-      </div>
-    </div></section>
-  );
-}
-
 /* ---------- footer ---------- */
 function Footer({ go }) {
   return (
