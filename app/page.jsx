@@ -572,17 +572,23 @@ function Booking({ addBooking, go, user }) {
           </>)}
         </>)}
 
-        {step === 4 && selectedSlot && (<>
+        {step === 4 && (<>
           <SLabel>Review & confirm</SLabel>
-          <div className="summary">
-            <div className="srow"><span className="k">Session</span><span className="v">{cls?.label}</span></div>
-            <div className="srow"><span className="k">Date</span><span className="v">{fmtDate(selectedSlot.date)}</span></div>
-            <div className="srow"><span className="k">Time</span><span className="v">{selectedSlot.time}</span></div>
-            <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
-            <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
-            <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
-          </div>
-          <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+          {selectedSlot ? (
+            <>
+              <div className="summary">
+                <div className="srow"><span className="k">Session</span><span className="v">{cls?.label || "Session"}</span></div>
+                <div className="srow"><span className="k">Date</span><span className="v">{fmtDate(selectedSlot.date)}</span></div>
+                <div className="srow"><span className="k">Time</span><span className="v">{selectedSlot.time}</span></div>
+                <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
+                <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
+                <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
+              </div>
+              <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+            </>
+          ) : (
+            <div className="empty-day">Please go back and select a time slot.</div>
+          )}
           {error && <p style={{ color: "var(--flame)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>{error}</p>}
         </>)}
       </div>

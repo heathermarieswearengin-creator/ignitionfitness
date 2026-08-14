@@ -491,23 +491,24 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 
 
 /* booking calendar */
-.booking-cal{background:var(--f800);border:1.5px solid var(--line);border-radius:14px;padding:12px;overflow:hidden}
-.booking-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
-.booking-cal-dow{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ash);text-transform:uppercase;padding:6px 0}
-.booking-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.booking-cal-day{aspect-ratio:1;display:grid;place-items:center;font-family:var(--display);font-size:16px;
-  background:var(--f900);border:1.5px solid transparent;border-radius:10px;cursor:pointer;color:var(--bone);transition:.15s}
-.booking-cal-day:disabled{opacity:.25;cursor:not-allowed}
-.booking-cal-day.outside{opacity:.15}
-.booking-cal-day.past{opacity:.25}
-.booking-cal-day.has-slots{border-color:var(--ember);background:rgba(224,45,36,.08)}
-.booking-cal-day.has-slots:hover{background:rgba(224,45,36,.18);transform:translateY(-1px)}
+.booking-cal{background:var(--f800);border:1.5px solid var(--line);border-radius:14px;padding:16px;overflow:hidden}
+.booking-cal-head{display:grid !important;grid-template-columns:repeat(7,1fr) !important;gap:6px;margin-bottom:10px}
+.booking-cal-dow{text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ash);text-transform:uppercase;padding:8px 0}
+.booking-cal-grid{display:grid !important;grid-template-columns:repeat(7,1fr) !important;gap:6px}
+.booking-cal-day{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px;
+  background:var(--f900);border:2px solid transparent;border-radius:10px;cursor:pointer;color:var(--bone);transition:.15s;padding:0}
+.booking-cal-day:disabled{opacity:.3;cursor:not-allowed}
+.booking-cal-day.outside{opacity:.2}
+.booking-cal-day.past{opacity:.3}
+.booking-cal-day.has-slots{border-color:var(--ember);background:rgba(224,45,36,.12)}
+.booking-cal-day.has-slots:hover{background:rgba(224,45,36,.22);transform:translateY(-2px)}
 .booking-cal-day.selected{background:linear-gradient(150deg,var(--flame),var(--ember));border-color:transparent;color:#fff}
 .booking-cal-day.today{box-shadow:inset 0 0 0 2px var(--gold)}
 @media(max-width:500px){
-  .booking-cal{padding:8px}
-  .booking-cal-day{font-size:14px;border-radius:8px}
-  .booking-cal-dow{font-size:9px}
+  .booking-cal{padding:10px}
+  .booking-cal-grid,.booking-cal-head{gap:4px}
+  .booking-cal-day{font-size:15px;border-radius:8px}
+  .booking-cal-dow{font-size:9px;padding:6px 0}
 }
 `;
 
