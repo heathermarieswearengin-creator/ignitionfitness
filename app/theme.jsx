@@ -451,14 +451,29 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 
 /* Mobile menu toggle */
 .mobile-menu-btn{display:none;background:none;border:none;padding:10px;cursor:pointer;color:var(--bone);
-  min-height:44px;min-width:44px}
+  min-height:44px;min-width:44px;border-radius:8px;transition:.15s}
+.mobile-menu-btn:active{background:var(--f800)}
 .mobile-nav{display:none;position:fixed;top:64px;left:0;right:0;bottom:0;background:var(--black);
-  z-index:49;padding:24px;flex-direction:column;gap:8px;overflow-y:auto}
+  z-index:49;padding:24px 20px;flex-direction:column;gap:6px;overflow-y:auto;
+  border-top:1px solid var(--line)}
 .mobile-nav.open{display:flex}
-.mobile-nav .nlink{display:block;width:100%;text-align:left;padding:14px 16px;font-size:14px}
+.mobile-nav .nlink{display:block;width:100%;text-align:left;padding:16px 18px;font-size:14px;
+  border-radius:10px;-webkit-tap-highlight-color:transparent}
+.mobile-nav .nlink:active{background:var(--f800)}
+.mobile-nav .nlink.on{background:var(--f800);color:var(--ember2)}
 
 @media(max-width:860px){
   .mobile-menu-btn{display:grid;place-items:center}
+  .nav-in{height:64px}
+}
+
+@media(max-width:500px){
+  .nav{backdrop-filter:blur(16px);background:rgba(12,9,8,.9)}
+  .nav-in{height:60px;padding:0 4px}
+  .logo svg{height:44px}
+  .mobile-nav{top:60px;padding:20px 16px;gap:4px}
+  .mobile-nav .nlink{padding:15px 16px;font-size:13px}
+  .mobile-nav .btn{margin-top:8px}
 }
 
 /* Extra small screens */
@@ -707,24 +722,94 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .sess-row-cal{order:2}
 }
 
-/* Mobile adjustments */
+/* Mobile layout */
 @media(max-width:500px){
-  .my-sessions-page{padding:40px 0 80px}
-  .my-sessions-greeting{margin-bottom:32px}
-  .greeting-label{font-size:11px;margin-bottom:6px}
-  .my-sessions-actions{grid-template-columns:1fr;gap:10px;margin-bottom:36px}
-  .ms-action-card{padding:16px 18px}
+  /* Page spacing */
+  .my-sessions-page{padding:28px 0 100px}
+  .my-sessions-wrap{padding:0 16px}
+
+  /* Greeting */
+  .my-sessions-greeting{margin-bottom:28px;text-align:center}
+  .greeting-label{font-size:11px;letter-spacing:.18em;margin-bottom:6px}
+  .greeting-name{font-size:38px}
+
+  /* Action cards - stacked full width */
+  .my-sessions-actions{grid-template-columns:1fr;gap:12px;margin-bottom:32px}
+  .ms-action-card{padding:18px 20px;gap:14px;border-radius:14px;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .ms-action-card:active{transform:scale(.98);opacity:.9}
+  .ms-action-card.primary:active{box-shadow:0 4px 16px rgba(224,45,36,.4)}
+  .ms-action-icon{width:48px;height:48px;border-radius:12px}
+  .ms-action-title{font-size:17px}
+  .ms-action-sub{font-size:12px}
+  .ms-action-card > svg{display:none}
+
+  /* Panel */
+  .my-sessions-panel{border-radius:16px;margin-bottom:20px}
+  .ms-panel-header{padding:16px 18px}
+  .ms-panel-header h2{font-size:17px}
+  .ms-panel-count{font-size:12px;padding:4px 10px}
+  .ms-panel-body{padding:16px}
+
+  /* Empty state */
+  .ms-empty-state{padding:40px 16px 48px}
+  .ms-empty-icon{width:88px;height:88px;border-radius:22px;margin-bottom:24px}
+  .ms-empty-icon svg{width:44px;height:44px}
+  .ms-empty-state h3{font-size:22px;margin-bottom:10px}
+  .ms-empty-state p{font-size:14px;line-height:1.55;margin-bottom:24px;max-width:260px}
+  .ms-empty-state .btn{width:100%;padding:16px 24px;font-size:12px}
+
+  /* Session cards - full width mobile treatment */
+  .ms-sessions-list{gap:14px}
+  .sess-row{padding:18px;border-radius:14px;gap:16px}
+  .sess-row-left{gap:12px}
+  .sess-row-icon{width:44px;height:44px;border-radius:11px}
+  .sess-row-info{gap:2px}
+  .sess-row-type{font-size:15px;font-weight:700}
+  .sess-row-when{font-size:11px;letter-spacing:.03em}
+
+  /* Status and actions */
+  .sess-row-right{flex-direction:column;align-items:stretch;gap:12px}
+  .sess-row-right .badge{align-self:flex-start;margin-right:0;font-size:10px;padding:5px 10px}
+
+  /* Action buttons - side by side, full width */
+  .sess-row-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+  .sess-action-btn{width:100%;padding:14px 12px;font-size:11px;border-radius:10px;
+    font-weight:700;text-align:center;-webkit-tap-highlight-color:transparent}
+  .sess-action-btn:active{transform:scale(.97);opacity:.85}
+
+  /* Calendar links */
+  .sess-row-cal{justify-content:center;gap:16px;padding-top:4px;
+    border-top:1px solid var(--line);margin-top:2px}
+  .sess-row-cal a{font-size:11px;padding:8px 0}
+
+  /* Past sessions */
+  .my-sessions-panel.past-panel{margin-bottom:0}
+  .sess-row.past{padding:14px 16px}
+  .sess-row.past .sess-row-icon{width:38px;height:38px}
+  .sess-row.past .sess-row-type{font-size:14px}
+}
+
+/* Extra small screens (iPhone SE, etc) */
+@media(max-width:375px){
+  .my-sessions-page{padding:24px 0 90px}
+  .my-sessions-wrap{padding:0 14px}
+  .greeting-name{font-size:34px}
+  .my-sessions-actions{gap:10px;margin-bottom:28px}
+  .ms-action-card{padding:16px 18px;gap:12px}
   .ms-action-icon{width:44px;height:44px}
   .ms-action-title{font-size:16px}
-  .ms-action-card > svg{display:none}
-  .ms-panel-header h2{font-size:18px}
-  .ms-empty-state{padding:36px 16px 44px}
-  .ms-empty-icon{width:80px;height:80px;border-radius:20px}
-  .ms-empty-state h3{font-size:24px}
-  .ms-empty-state p{font-size:14px}
+  .ms-action-sub{font-size:11px}
+  .ms-panel-header{padding:14px 16px}
+  .ms-panel-body{padding:14px}
+  .ms-empty-state{padding:32px 14px 40px}
+  .ms-empty-icon{width:76px;height:76px}
+  .ms-empty-state h3{font-size:20px}
+  .ms-empty-state p{font-size:13px}
+  .sess-row{padding:16px}
   .sess-row-icon{width:40px;height:40px}
-  .sess-row-type{font-size:15px}
-  .sess-action-btn{padding:9px 12px;font-size:10px}
+  .sess-row-type{font-size:14px}
+  .sess-action-btn{padding:12px 10px;font-size:10px}
 }
 
 /* Cancel button variant */
