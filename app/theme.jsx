@@ -636,12 +636,16 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 /* Action cards */
 .my-sessions-actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px}
 .ms-action-card{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
-  background:#1d1411 !important;border:2px solid var(--line);border-radius:16px;padding:22px 24px;
-  color:var(--bone);cursor:pointer;transition:all .2s ease}
+  background-color:#1d1411 !important;background-image:none !important;
+  border:2px solid #3a261d;border-radius:16px;padding:22px 24px;
+  color:#f3ece1;cursor:pointer;transition:all .2s ease;
+  -webkit-appearance:none;appearance:none;font-family:inherit}
 .ms-action-card:hover{border-color:var(--ember);transform:translateY(-3px);
   box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.ms-action-card.primary{background:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important;
-  border-color:transparent;box-shadow:0 8px 28px rgba(224,45,36,.35)}
+.ms-action-card.primary{background-color:#c9251c !important;
+  background-image:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important;
+  border-color:transparent;box-shadow:0 8px 28px rgba(224,45,36,.35);
+  -webkit-appearance:none;appearance:none}
 .ms-action-card.primary:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(224,45,36,.45)}
 .ms-action-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;flex:none;
   background:rgba(255,255,255,.12)}
@@ -735,9 +739,11 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   /* Action cards - stacked full width */
   .my-sessions-actions{grid-template-columns:1fr;gap:12px;margin-bottom:32px}
   .ms-action-card{padding:18px 20px;gap:14px;border-radius:14px;
-    -webkit-tap-highlight-color:transparent;touch-action:manipulation}
-  .ms-action-card:not(.primary){background:#1d1411 !important;border-color:#3a261d}
-  .ms-action-card.primary{background:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important}
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+    -webkit-appearance:none !important;appearance:none !important}
+  .ms-action-card:not(.primary){background-color:#1d1411 !important;background-image:none !important;border-color:#3a261d}
+  .ms-action-card.primary{background-color:#c9251c !important;
+    background-image:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important}
   .ms-action-card:active{transform:scale(.98);opacity:.9}
   .ms-action-card.primary:active{box-shadow:0 4px 16px rgba(224,45,36,.4)}
   .ms-action-icon{width:48px;height:48px;border-radius:12px}
