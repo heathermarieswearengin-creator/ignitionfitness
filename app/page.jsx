@@ -265,6 +265,7 @@ function MySessions({ go, user, status }) {
   const [cancelBooking, setCancelBooking] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
 
   const reload = React.useCallback(() => {
     if (!user) { setLoading(false); return; }
@@ -355,6 +356,9 @@ function MySessions({ go, user, status }) {
       if (!res.ok) throw new Error(data?.error || "Could not cancel");
       closeCancel();
       reload();
+      // Show success toast
+      setCancelSuccess(true);
+      setTimeout(() => setCancelSuccess(false), 3000);
     } catch (e) {
       setCancelError(e.message);
     } finally {
@@ -760,22 +764,104 @@ function MySessions({ go, user, status }) {
 
       {/* Cancel confirmation modal */}
       {cancelBooking && (
-        <div className="modal-overlay" onClick={closeCancel}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Cancel Session?</h2>
-            <div className="modal-session">
-              <div style={{ fontWeight: 600 }}>{CLASS_MAP[cancelBooking.classType]?.label}</div>
-              <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(cancelBooking.date)} · {cancelBooking.time}</div>
+        <div
+          onClick={closeCancel}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16, overflowY: "auto"
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 20,
+              padding: "28px 24px", width: "100%", maxWidth: 400,
+              position: "relative", boxShadow: "0 20px 60px rgba(0,0,0,.5)"
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeCancel}
+              style={{
+                position: "absolute", top: 16, right: 16,
+                width: 32, height: 32, borderRadius: 8,
+                background: "rgba(255,255,255,.05)", border: "none",
+                color: "#78716c", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+
+            <h2 style={{
+              fontFamily: "var(--display)", fontSize: 24, textTransform: "uppercase",
+              letterSpacing: ".02em", color: "#f3ece1", marginBottom: 20, paddingRight: 32
+            }}>Cancel Session?</h2>
+
+            {/* Session being cancelled */}
+            <div style={{
+              background: "#140d0b", border: "1px solid #281a15", borderRadius: 12,
+              padding: 16, marginBottom: 20
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 11, display: "grid", placeItems: "center",
+                  background: "rgba(239,68,68,.1)", color: "#ef4444"
+                }}>
+                  {cancelBooking.classType === "GROUP" || cancelBooking.classType === "group" ? <Bell s={22} /> : <User s={22} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f3ece1", marginBottom: 2 }}>
+                    {CLASS_MAP[cancelBooking.classType?.toLowerCase()]?.label ?? CLASS_MAP[cancelBooking.classType]?.label ?? cancelBooking.classType}
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 13, color: "#b0a193" }}>
+                    {fmtDate(cancelBooking.date)} · {cancelBooking.time}
+                  </div>
+                </div>
+              </div>
             </div>
-            <p style={{ color: "var(--ash)", fontSize: 14, marginBottom: 20 }}>
+
+            <p style={{ color: "#b0a193", fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
               This can't be undone. The slot will be released for others to book.
             </p>
-            {cancelError && <div className="modal-error">{cancelError}</div>}
+
+            {cancelError && (
+              <div style={{
+                background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
+                borderRadius: 10, padding: "12px 14px", marginBottom: 20,
+                color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
+              }}>{cancelError}</div>
+            )}
+
             <div style={{ display: "flex", gap: 12 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeCancel} disabled={cancelling}>Keep Session</button>
-              <button className="btn btn-cancel" style={{ flex: 1 }} onClick={confirmCancel} disabled={cancelling}>
-                {cancelling ? "Cancelling…" : "Yes, Cancel"}
-              </button>
+              <button
+                onClick={closeCancel}
+                disabled={cancelling}
+                style={{
+                  flex: 1, padding: "14px 20px", borderRadius: 10,
+                  fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                  letterSpacing: ".06em", textTransform: "uppercase",
+                  background: "transparent", border: "1.5px solid #3a261d",
+                  color: "#f3ece1", cursor: "pointer",
+                  opacity: cancelling ? 0.5 : 1
+                }}
+              >Keep Session</button>
+              <button
+                onClick={confirmCancel}
+                disabled={cancelling}
+                style={{
+                  flex: 1, padding: "14px 20px", borderRadius: 10,
+                  fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                  letterSpacing: ".06em", textTransform: "uppercase",
+                  background: "rgba(239,68,68,.15)", border: "1.5px solid rgba(239,68,68,.4)",
+                  color: "#ef4444", cursor: "pointer",
+                  opacity: cancelling ? 0.5 : 1
+                }}
+              >{cancelling ? "Cancelling…" : "Yes, Cancel"}</button>
             </div>
           </div>
         </div>
@@ -783,30 +869,97 @@ function MySessions({ go, user, status }) {
 
       {/* Reschedule modal */}
       {rescheduleBooking && !rescheduleSuccess && (
-        <div className="modal-overlay" onClick={closeReschedule}>
-          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <div
+          onClick={closeReschedule}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,.85)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            overflowY: "auto"
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#140d0b", borderTop: "1.5px solid #3a261d",
+              borderRadius: "24px 24px 0 0",
+              padding: "24px 20px 32px", width: "100%", maxWidth: 500,
+              maxHeight: "92vh", overflowY: "auto",
+              position: "relative", boxShadow: "0 -10px 40px rgba(0,0,0,.5)"
+            }}
+          >
+            {/* Drag handle indicator */}
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "#3a261d", margin: "0 auto 20px" }}></div>
+
+            {/* Close button */}
+            <button
+              onClick={closeReschedule}
+              style={{
+                position: "absolute", top: 20, right: 16,
+                width: 36, height: 36, borderRadius: 10,
+                background: "rgba(255,255,255,.05)", border: "none",
+                color: "#78716c", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+
             {rescheduleStep === 1 && (
               <>
-                <h2>Reschedule Session</h2>
-                <div className="modal-session" style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: "var(--ash)", textTransform: "uppercase", letterSpacing: ".08em" }}>Current</div>
-                  <div style={{ fontWeight: 600 }}>{CLASS_MAP[rescheduleBooking.classType]?.label}</div>
-                  <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(rescheduleBooking.date)} · {rescheduleBooking.time}</div>
+                <h2 style={{
+                  fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase",
+                  letterSpacing: ".02em", color: "#f3ece1", marginBottom: 4, paddingRight: 40
+                }}>Reschedule Session</h2>
+
+                {/* Current session info */}
+                <div style={{
+                  background: "#1d1411", border: "1px solid #281a15", borderRadius: 12,
+                  padding: 14, marginBottom: 20, marginTop: 16
+                }}>
+                  <div style={{ fontSize: 10, color: "#78716c", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Currently</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, display: "grid", placeItems: "center",
+                      background: "rgba(240,171,51,.1)", color: "#f0ab33"
+                    }}>
+                      {rescheduleBooking.classType === "GROUP" || rescheduleBooking.classType === "group" ? <Bell s={20} /> : <User s={20} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#f3ece1" }}>
+                        {CLASS_MAP[rescheduleBooking.classType?.toLowerCase()]?.label ?? CLASS_MAP[rescheduleBooking.classType]?.label ?? rescheduleBooking.classType}
+                      </div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "#b0a193" }}>
+                        {fmtDate(rescheduleBooking.date)} · {rescheduleBooking.time}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 14, color: "var(--bone)", marginBottom: 16 }}>Pick a new date and time:</div>
+
+                <div style={{ fontSize: 14, color: "#f3ece1", fontWeight: 600, marginBottom: 16 }}>Pick a new date and time:</div>
 
                 {/* Month nav */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 16 }}>
-                  <button onClick={prevMonth} className="cal-nav">&larr;</button>
-                  <div style={{ fontFamily: "var(--body)", fontSize: 16, fontWeight: 600, color: "var(--bone)", minWidth: 140, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
-                  <button onClick={nextMonth} className="cal-nav">&rarr;</button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <button onClick={prevMonth} style={{
+                    width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "#1d1411", border: "1px solid #3a261d", color: "#b0a193", cursor: "pointer", fontSize: 18
+                  }}>←</button>
+                  <div style={{ fontFamily: "var(--body)", fontSize: 16, fontWeight: 600, color: "#f3ece1" }}>
+                    {monthNames[viewMonth.month]} {viewMonth.year}
+                  </div>
+                  <button onClick={nextMonth} style={{
+                    width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "#1d1411", border: "1px solid #3a261d", color: "#b0a193", cursor: "pointer", fontSize: 18
+                  }}>→</button>
                 </div>
 
                 {/* Calendar grid */}
-                <div style={{ maxWidth: 350, margin: "0 auto" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
                     {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                      <div key={i} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ash)", padding: "4px 0" }}>{d}</div>
+                      <div key={i} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", padding: "6px 0", fontWeight: 600 }}>{d}</div>
                     ))}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
@@ -817,12 +970,12 @@ function MySessions({ go, user, status }) {
                       const isSelected = selectedDate === isoD;
                       return (
                         <button key={i} onClick={() => hasAvail && setSelectedDate(isoD)} disabled={!hasAvail} style={{
-                          width: "100%", height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+                          width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                           fontFamily: "var(--body)", fontSize: 14, fontWeight: isSelected ? 700 : 500,
-                          background: isSelected ? "var(--ember)" : hasAvail ? "var(--card)" : "transparent",
-                          color: isSelected ? "#fff" : outside || isPast ? "var(--line)" : hasAvail ? "var(--bone)" : "var(--ash)",
-                          border: hasAvail && !isSelected ? "1px solid var(--line)" : "1px solid transparent",
-                          borderRadius: 8, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1,
+                          background: isSelected ? "#c9251c" : hasAvail ? "#1d1411" : "transparent",
+                          color: isSelected ? "#fff" : outside || isPast ? "#3a261d" : hasAvail ? "#f3ece1" : "#78716c",
+                          border: hasAvail && !isSelected ? "1px solid #3a261d" : "1px solid transparent",
+                          borderRadius: 10, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1,
                         }}>{date.getUTCDate()}</button>
                       );
                     })}
@@ -831,58 +984,123 @@ function MySessions({ go, user, status }) {
 
                 {/* Time slots */}
                 {selectedDate && (
-                  <div style={{ marginTop: 20 }}>
-                    <div style={{ fontSize: 13, color: "var(--ash)", marginBottom: 10 }}>Available times for {fmtDate(selectedDate)}:</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, color: "#b0a193", marginBottom: 12 }}>Available times for {fmtDate(selectedDate)}:</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                       {slotsForDate(selectedDate).map((s) => (
                         <button key={s.sessionId} onClick={() => setSelectedSlot(s)} style={{
-                          padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500,
-                          background: selectedSlot?.sessionId === s.sessionId ? "var(--ember)" : "var(--card)",
-                          color: selectedSlot?.sessionId === s.sessionId ? "#fff" : "var(--bone)",
-                          border: selectedSlot?.sessionId === s.sessionId ? "none" : "1px solid var(--line)",
+                          padding: "12px 18px", borderRadius: 10, fontSize: 14, fontWeight: 600,
+                          background: selectedSlot?.sessionId === s.sessionId ? "#c9251c" : "#1d1411",
+                          color: selectedSlot?.sessionId === s.sessionId ? "#fff" : "#f3ece1",
+                          border: selectedSlot?.sessionId === s.sessionId ? "none" : "1px solid #3a261d",
                           cursor: "pointer",
                         }}>{s.time}</button>
                       ))}
+                      {slotsForDate(selectedDate).length === 0 && (
+                        <div style={{ color: "#78716c", fontSize: 13 }}>No available times on this date</div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {rescheduleError && <div className="modal-error" style={{ marginTop: 16 }}>{rescheduleError}</div>}
+                {!selectedDate && !slotsLoaded && (
+                  <div style={{ textAlign: "center", color: "#78716c", padding: 20 }}>Loading availability...</div>
+                )}
 
-                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeReschedule}>Cancel</button>
-                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setRescheduleStep(2)} disabled={!selectedSlot}>
-                    Review Change
-                  </button>
+                {rescheduleError && (
+                  <div style={{
+                    background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
+                    borderRadius: 10, padding: "12px 14px", marginBottom: 16,
+                    color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
+                  }}>{rescheduleError}</div>
+                )}
+
+                <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                  <button onClick={closeReschedule} style={{
+                    flex: 1, padding: "14px 20px", borderRadius: 10,
+                    fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                    letterSpacing: ".06em", textTransform: "uppercase",
+                    background: "transparent", border: "1.5px solid #3a261d",
+                    color: "#f3ece1", cursor: "pointer"
+                  }}>Cancel</button>
+                  <button
+                    onClick={() => setRescheduleStep(2)}
+                    disabled={!selectedSlot}
+                    style={{
+                      flex: 1, padding: "14px 20px", borderRadius: 10,
+                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                      letterSpacing: ".06em", textTransform: "uppercase",
+                      background: selectedSlot ? "linear-gradient(150deg, #e02d24, #c9251c)" : "#281a15",
+                      border: "none", color: selectedSlot ? "#fff" : "#78716c", cursor: selectedSlot ? "pointer" : "not-allowed"
+                    }}
+                  >Review Change</button>
                 </div>
               </>
             )}
 
             {rescheduleStep === 2 && selectedSlot && (
               <>
-                <h2>Confirm Reschedule</h2>
-                <div className="reschedule-compare">
-                  <div className="resc-from">
-                    <div className="resc-label">From</div>
-                    <div className="resc-date">{fmtDate(rescheduleBooking.date)}</div>
-                    <div className="resc-time">{rescheduleBooking.time}</div>
+                <h2 style={{
+                  fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase",
+                  letterSpacing: ".02em", color: "#f3ece1", marginBottom: 24, paddingRight: 40, textAlign: "center"
+                }}>Confirm Reschedule</h2>
+
+                {/* From → To comparison */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16, justifyContent: "center", marginBottom: 24 }}>
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#78716c", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>From</div>
+                    <div style={{ fontFamily: "var(--display)", fontSize: 16, color: "#78716c", textDecoration: "line-through", marginBottom: 4 }}>
+                      {fmtDate(rescheduleBooking.date)}
+                    </div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 14, color: "#78716c" }}>{rescheduleBooking.time}</div>
                   </div>
-                  <div className="resc-arrow"><Arrow s={24} /></div>
-                  <div className="resc-to">
-                    <div className="resc-label">To</div>
-                    <div className="resc-date">{fmtDate(selectedSlot.date)}</div>
-                    <div className="resc-time">{selectedSlot.time}</div>
+                  <div style={{ color: "#f0ab33" }}>
+                    <Arrow s={24} />
+                  </div>
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#f0ab33", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>To</div>
+                    <div style={{ fontFamily: "var(--display)", fontSize: 16, color: "#f3ece1", marginBottom: 4 }}>
+                      {fmtDate(selectedSlot.date)}
+                    </div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 14, color: "#f0ab33" }}>{selectedSlot.time}</div>
                   </div>
                 </div>
-                <p style={{ color: "var(--ash)", fontSize: 14, textAlign: "center", marginTop: 16 }}>
-                  {CLASS_MAP[rescheduleBooking.classType]?.label}
+
+                <p style={{ color: "#b0a193", fontSize: 14, textAlign: "center", marginBottom: 24 }}>
+                  {CLASS_MAP[rescheduleBooking.classType?.toLowerCase()]?.label ?? CLASS_MAP[rescheduleBooking.classType]?.label ?? rescheduleBooking.classType}
                 </p>
-                {rescheduleError && <div className="modal-error" style={{ marginTop: 16 }}>{rescheduleError}</div>}
-                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setRescheduleStep(1)} disabled={rescheduling}>Back</button>
-                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmReschedule} disabled={rescheduling}>
-                    {rescheduling ? "Rescheduling…" : "Confirm Change"}
-                  </button>
+
+                {rescheduleError && (
+                  <div style={{
+                    background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
+                    borderRadius: 10, padding: "12px 14px", marginBottom: 20,
+                    color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
+                  }}>{rescheduleError}</div>
+                )}
+
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button
+                    onClick={() => setRescheduleStep(1)}
+                    disabled={rescheduling}
+                    style={{
+                      flex: 1, padding: "14px 20px", borderRadius: 10,
+                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                      letterSpacing: ".06em", textTransform: "uppercase",
+                      background: "transparent", border: "1.5px solid #3a261d",
+                      color: "#f3ece1", cursor: "pointer", opacity: rescheduling ? 0.5 : 1
+                    }}
+                  >Back</button>
+                  <button
+                    onClick={confirmReschedule}
+                    disabled={rescheduling}
+                    style={{
+                      flex: 1, padding: "14px 20px", borderRadius: 10,
+                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                      letterSpacing: ".06em", textTransform: "uppercase",
+                      background: "linear-gradient(150deg, #e02d24, #c9251c)",
+                      border: "none", color: "#fff", cursor: "pointer", opacity: rescheduling ? 0.5 : 1
+                    }}
+                  >{rescheduling ? "Rescheduling…" : "Confirm Change"}</button>
                 </div>
               </>
             )}
@@ -892,20 +1110,99 @@ function MySessions({ go, user, status }) {
 
       {/* Reschedule success modal */}
       {rescheduleSuccess && (
-        <div className="modal-overlay" onClick={closeReschedule}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="seal" style={{ margin: "0 auto 16px" }}><Check s={32} /></div>
-            <h2 style={{ textAlign: "center" }}>Session Rescheduled</h2>
-            <p style={{ color: "var(--ash)", fontSize: 14, textAlign: "center", marginBottom: 20 }}>
+        <div
+          onClick={closeReschedule}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 20,
+              padding: "32px 24px", width: "100%", maxWidth: 400,
+              boxShadow: "0 20px 60px rgba(0,0,0,.5)", textAlign: "center"
+            }}
+          >
+            {/* Success icon */}
+            <div style={{
+              width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px",
+              background: "linear-gradient(150deg, rgba(34,197,94,.2), rgba(34,197,94,.1))",
+              border: "2px solid rgba(34,197,94,.4)",
+              display: "grid", placeItems: "center", color: "#22c55e"
+            }}>
+              <Check s={36} />
+            </div>
+
+            <h2 style={{
+              fontFamily: "var(--display)", fontSize: 24, textTransform: "uppercase",
+              letterSpacing: ".02em", color: "#f3ece1", marginBottom: 12
+            }}>Session Rescheduled</h2>
+
+            <p style={{ color: "#b0a193", fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>
               Your session has been moved. A confirmation email is on its way.
             </p>
-            <div className="modal-session">
-              <div style={{ fontWeight: 600 }}>{CLASS_MAP[rescheduleSuccess.newBooking.classType]?.label}</div>
-              <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(rescheduleSuccess.newBooking.date)} · {rescheduleSuccess.newBooking.time}</div>
-              <div style={{ color: "var(--ash)", fontSize: 12, marginTop: 4 }}>Confirmation: {rescheduleSuccess.newBooking.ref}</div>
+
+            {/* New session details */}
+            <div style={{
+              background: "#140d0b", border: "1px solid #281a15", borderRadius: 12,
+              padding: 16, marginBottom: 24
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 11, display: "grid", placeItems: "center",
+                  background: "rgba(34,197,94,.1)", color: "#22c55e"
+                }}>
+                  {rescheduleSuccess.newBooking.classType === "GROUP" || rescheduleSuccess.newBooking.classType === "group" ? <Bell s={22} /> : <User s={22} />}
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f3ece1", marginBottom: 2 }}>
+                    {CLASS_MAP[rescheduleSuccess.newBooking.classType?.toLowerCase()]?.label ?? CLASS_MAP[rescheduleSuccess.newBooking.classType]?.label ?? rescheduleSuccess.newBooking.classType}
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 13, color: "#22c55e" }}>
+                    {fmtDate(rescheduleSuccess.newBooking.date)} · {rescheduleSuccess.newBooking.time}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", marginTop: 12 }}>
+                Confirmation: {rescheduleSuccess.newBooking.ref}
+              </div>
             </div>
-            <button className="btn btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={closeReschedule}>Done</button>
+
+            <button
+              onClick={closeReschedule}
+              style={{
+                width: "100%", padding: "14px 20px", borderRadius: 10,
+                fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+                letterSpacing: ".06em", textTransform: "uppercase",
+                background: "linear-gradient(150deg, #e02d24, #c9251c)",
+                border: "none", color: "#fff", cursor: "pointer"
+              }}
+            >Done</button>
           </div>
+        </div>
+      )}
+
+      {/* Cancel success toast */}
+      {cancelSuccess && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          zIndex: 1100, display: "flex", alignItems: "center", gap: 12,
+          background: "#1d1411", border: "1.5px solid rgba(34,197,94,.4)",
+          borderRadius: 14, padding: "14px 20px", boxShadow: "0 8px 32px rgba(0,0,0,.4)",
+          animation: "slideUp .3s ease"
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "rgba(34,197,94,.15)", display: "grid", placeItems: "center",
+            color: "#22c55e"
+          }}>
+            <Check s={18} />
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#f3ece1" }}>Session cancelled</span>
         </div>
       )}
     </div></div>
