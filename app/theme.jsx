@@ -714,6 +714,160 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   letter-spacing:.04em;text-transform:uppercase;color:var(--ash);text-decoration:none;transition:.15s}
 .sess-row-cal a:hover{color:var(--ember2)}
 
+/* ===== NEW SESSION CARD STYLES ===== */
+
+/* Structured sessions container */
+.ms-sessions-structured{display:flex;flex-direction:column;gap:16px}
+
+/* Featured "Next Session" card */
+.featured-session-card{
+  background:linear-gradient(145deg,#1d1411 0%,#281a15 100%);
+  border:2px solid #c9251c;
+  border-radius:18px;
+  padding:0;
+  overflow:hidden;
+  box-shadow:0 4px 24px rgba(201,37,28,.15),inset 0 1px 0 rgba(255,255,255,.03);
+}
+.featured-session-header{
+  padding:14px 20px 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.featured-session-badge{
+  display:flex;align-items:center;gap:12px;width:100%;justify-content:space-between;
+}
+.next-label{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:#f0ab33;
+  background:rgba(240,171,51,.12);padding:6px 12px;border-radius:20px;
+}
+.status-pill{
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:6px 12px;border-radius:20px;
+}
+.status-pill.status-confirmed{background:rgba(34,197,94,.15);color:#22c55e}
+.status-pill.status-pending{background:rgba(251,191,36,.15);color:#fbbf24}
+.status-pill.status-cancelled{background:rgba(239,68,68,.15);color:#ef4444}
+.status-pill.status-checked-in{background:rgba(59,130,246,.15);color:#3b82f6}
+
+.featured-session-content{
+  padding:20px;
+  display:flex;align-items:center;gap:18px;
+}
+.featured-session-icon{
+  width:56px;height:56px;min-width:56px;border-radius:14px;
+  display:grid;place-items:center;
+  background:linear-gradient(150deg,rgba(224,45,36,.22),rgba(150,22,16,.08));
+  color:#f0ab33;
+}
+.featured-session-details{flex:1;min-width:0}
+.featured-session-type{
+  font-size:20px;font-weight:700;color:#f3ece1;margin-bottom:4px;
+}
+.featured-session-when{
+  font-family:var(--mono);font-size:13px;color:#b0a193;letter-spacing:.02em;
+}
+
+.featured-session-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  padding:0 20px 16px;
+}
+.session-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;padding:12px 16px;border-radius:10px;
+  cursor:pointer;transition:all .15s;border:none;
+}
+.session-btn.secondary{
+  background:transparent;border:1.5px solid #3a261d;color:#f3ece1;
+}
+.session-btn.secondary:hover{border-color:#f0ab33;color:#f0ab33}
+.session-btn.danger{
+  background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.3);color:#ef4444;
+}
+.session-btn.danger:hover{background:rgba(239,68,68,.15);border-color:#ef4444}
+.session-btn.small{font-size:11px;padding:10px 12px;gap:6px}
+
+.featured-session-divider{
+  height:1px;background:#3a261d;margin:0 20px;
+}
+
+.featured-session-calendar{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:16px 20px;
+}
+.calendar-link{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.03em;
+  color:#b0a193;text-decoration:none;transition:color .15s;
+  padding:6px 0;
+}
+.calendar-link:hover{color:#f0ab33}
+.calendar-link.small{font-size:11px;gap:6px}
+
+/* View all sessions toggle */
+.remaining-sessions{margin-top:8px}
+.view-all-toggle{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:14px 20px;
+  background:#1d1411;border:1.5px solid #3a261d;border-radius:12px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:#b0a193;cursor:pointer;
+  transition:all .15s;
+}
+.view-all-toggle:hover{border-color:#f0ab33;color:#f0ab33}
+.view-all-toggle svg{transition:transform .2s}
+.view-all-toggle.expanded svg{transform:rotate(180deg)}
+
+.remaining-sessions-list{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:12px;
+}
+
+/* Compact session cards */
+.compact-session-card{
+  background:#1d1411;border:1.5px solid #3a261d;border-radius:14px;
+  overflow:hidden;transition:border-color .15s;
+}
+.compact-session-card:hover{border-color:rgba(240,171,51,.3)}
+.compact-session-card.expanded{border-color:rgba(224,45,36,.4)}
+
+.compact-session-main{
+  display:flex;align-items:center;gap:14px;
+  width:100%;padding:16px 18px;
+  background:transparent;border:none;cursor:pointer;text-align:left;
+}
+.compact-session-icon{
+  width:42px;height:42px;min-width:42px;border-radius:11px;
+  display:grid;place-items:center;
+  background:rgba(240,171,51,.1);color:#b0a193;
+}
+.compact-session-info{flex:1;min-width:0}
+.compact-session-type{
+  font-size:15px;font-weight:600;color:#f3ece1;margin-bottom:2px;
+}
+.compact-session-when{
+  font-family:var(--mono);font-size:11px;color:#78716c;letter-spacing:.02em;
+}
+.compact-session-chevron{
+  color:#78716c;transition:transform .2s,color .15s;
+}
+.compact-session-chevron.rotated{transform:rotate(180deg);color:#f0ab33}
+.compact-session-card:hover .compact-session-chevron{color:#b0a193}
+
+.compact-session-expanded{
+  padding:0 18px 16px;
+  border-top:1px solid #281a15;
+  padding-top:14px;
+}
+.compact-session-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  margin-bottom:12px;
+}
+.compact-session-calendar{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding-top:8px;border-top:1px solid #281a15;
+}
+
 /* Tablet adjustments */
 @media(max-width:768px){
   .my-sessions-wrap{max-width:100%}
@@ -782,6 +936,37 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .sess-row-info{gap:2px}
   .sess-row-type{font-size:15px;font-weight:700}
   .sess-row-when{font-size:11px;letter-spacing:.03em}
+
+  /* New session card styles - mobile */
+  .ms-sessions-structured{gap:14px}
+  .featured-session-card{border-radius:16px;border-width:2px}
+  .featured-session-header{padding:12px 16px 0}
+  .next-label{font-size:9px;padding:5px 10px}
+  .status-pill{font-size:9px;padding:5px 10px}
+  .featured-session-content{padding:16px}
+  .featured-session-icon{width:50px;height:50px;min-width:50px;border-radius:12px}
+  .featured-session-type{font-size:18px}
+  .featured-session-when{font-size:12px}
+  .featured-session-actions{padding:0 16px 14px;gap:10px}
+  .session-btn{padding:14px 12px;font-size:11px;border-radius:10px}
+  .session-btn:active{transform:scale(.97);opacity:.85}
+  .featured-session-divider{margin:0 16px}
+  .featured-session-calendar{padding:14px 16px;gap:20px;flex-wrap:wrap}
+  .calendar-link{font-size:11px}
+
+  .view-all-toggle{padding:14px 16px;font-size:11px;border-radius:10px}
+  .view-all-toggle:active{transform:scale(.98);opacity:.9}
+  .remaining-sessions-list{gap:10px;margin-top:10px}
+
+  .compact-session-card{border-radius:12px}
+  .compact-session-main{padding:14px 16px;gap:12px}
+  .compact-session-icon{width:40px;height:40px;min-width:40px;border-radius:10px}
+  .compact-session-type{font-size:14px}
+  .compact-session-when{font-size:10px}
+  .compact-session-expanded{padding:0 16px 14px;padding-top:12px}
+  .compact-session-actions{gap:8px;margin-bottom:10px}
+  .session-btn.small{padding:12px 10px;font-size:10px}
+  .compact-session-calendar{gap:16px;padding-top:10px}
 
   /* Status and actions */
   .sess-row-right{flex-direction:column;align-items:stretch;gap:12px}

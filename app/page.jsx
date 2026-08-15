@@ -343,33 +343,102 @@ function MySessions({ go, user, status }) {
   const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
   const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
   const [selectedDate, setSelectedDate] = useState(null);
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const [expandedSession, setExpandedSession] = useState(null);
 
-  const SessionCard = ({ b }) => (
-    <div className="sess-row">
-      <div className="sess-row-left">
-        <div className="sess-row-icon">
-          {b.classType === "GROUP" ? <Flame s={20} /> : <Clock s={20} />}
-        </div>
-        <div className="sess-row-info">
-          <div className="sess-row-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-          <div className="sess-row-when">{fmtDate(b.date)} · {b.time}</div>
-        </div>
-      </div>
-      <div className="sess-row-right">
-        <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
-        <div className="sess-row-actions">
-          <button className="sess-action-btn" onClick={() => openReschedule(b)}>Reschedule</button>
-          <button className="sess-action-btn cancel" onClick={() => openCancel(b)}>Cancel</button>
-        </div>
-        <div className="sess-row-cal">
-          <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">
-            <CalendarIcon s={14} /> Google
-          </a>
-          <a href={`/api/bookings/${b.id}/ics`}>
-            <CalendarIcon s={14} /> .ics
-          </a>
+  // Icons for session cards
+  const DownloadIcon = ({ s = 14 }) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+    </svg>
+  );
+  const ChevronDown = ({ s = 16 }) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M6 9l6 6 6-6"/>
+    </svg>
+  );
+
+  // Featured "Next Session" card - prominent styling
+  const FeaturedSessionCard = ({ b }) => (
+    <div className="featured-session-card">
+      <div className="featured-session-header">
+        <div className="featured-session-badge">
+          <span className="next-label">Next Session</span>
+          <span className={`status-pill status-${b.status}`}>{b.status.replace("-", " ")}</span>
         </div>
       </div>
+      <div className="featured-session-content">
+        <div className="featured-session-icon">
+          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={28} /> : <User s={28} />}
+        </div>
+        <div className="featured-session-details">
+          <div className="featured-session-type">{CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+          <div className="featured-session-when">{fmtDate(b.date)} · {b.time}</div>
+        </div>
+      </div>
+      <div className="featured-session-actions">
+        <button className="session-btn secondary" onClick={() => openReschedule(b)}>
+          <CalendarIcon s={16} />
+          <span>Reschedule</span>
+        </button>
+        <button className="session-btn danger" onClick={() => openCancel(b)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+          <span>Cancel</span>
+        </button>
+      </div>
+      <div className="featured-session-divider"></div>
+      <div className="featured-session-calendar">
+        <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" className="calendar-link">
+          <CalendarIcon s={16} />
+          <span>Google Calendar</span>
+        </a>
+        <a href={`/api/bookings/${b.id}/ics`} className="calendar-link">
+          <DownloadIcon s={16} />
+          <span>Download .ics</span>
+        </a>
+      </div>
+    </div>
+  );
+
+  // Compact card for secondary sessions
+  const CompactSessionCard = ({ b, isExpanded, onToggle }) => (
+    <div className={`compact-session-card ${isExpanded ? "expanded" : ""}`}>
+      <button className="compact-session-main" onClick={onToggle}>
+        <div className="compact-session-icon">
+          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={20} /> : <User s={20} />}
+        </div>
+        <div className="compact-session-info">
+          <div className="compact-session-type">{CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+          <div className="compact-session-when">{fmtDate(b.date)} · {b.time}</div>
+        </div>
+        <div className={`compact-session-chevron ${isExpanded ? "rotated" : ""}`}>
+          <ChevronDown s={18} />
+        </div>
+      </button>
+      {isExpanded && (
+        <div className="compact-session-expanded">
+          <div className="compact-session-actions">
+            <button className="session-btn secondary small" onClick={() => openReschedule(b)}>
+              <CalendarIcon s={14} />
+              <span>Reschedule</span>
+            </button>
+            <button className="session-btn danger small" onClick={() => openCancel(b)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+              <span>Cancel</span>
+            </button>
+          </div>
+          <div className="compact-session-calendar">
+            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" className="calendar-link small">
+              <CalendarIcon s={14} />
+              <span>Google</span>
+            </a>
+            <a href={`/api/bookings/${b.id}/ics`} className="calendar-link small">
+              <DownloadIcon s={14} />
+              <span>.ics</span>
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -442,8 +511,35 @@ function MySessions({ go, user, status }) {
             </div>
           )}
           {!loading && data.upcoming.length > 0 && (
-            <div className="ms-sessions-list">
-              {data.upcoming.map((b) => <SessionCard key={b.id} b={b} />)}
+            <div className="ms-sessions-structured">
+              {/* Featured next session */}
+              <FeaturedSessionCard b={data.upcoming[0]} />
+
+              {/* Remaining sessions - collapsed by default */}
+              {data.upcoming.length > 1 && (
+                <div className="remaining-sessions">
+                  <button
+                    className={`view-all-toggle ${showAllSessions ? "expanded" : ""}`}
+                    onClick={() => setShowAllSessions(!showAllSessions)}
+                  >
+                    <span>{showAllSessions ? "Hide" : "View all"} sessions ({data.upcoming.length - 1} more)</span>
+                    <ChevronDown s={18} />
+                  </button>
+
+                  {showAllSessions && (
+                    <div className="remaining-sessions-list">
+                      {data.upcoming.slice(1).map((b) => (
+                        <CompactSessionCard
+                          key={b.id}
+                          b={b}
+                          isExpanded={expandedSession === b.id}
+                          onToggle={() => setExpandedSession(expandedSession === b.id ? null : b.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
