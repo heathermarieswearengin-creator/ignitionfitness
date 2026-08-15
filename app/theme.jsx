@@ -149,9 +149,11 @@ h2.sh{font-family:var(--display);font-size:clamp(32px,5vw,58px);line-height:.98;
 .opt.sel{border-color:var(--ember);background:linear-gradient(120deg,rgba(224,45,36,.1),var(--f800))}
 .opt .oicon{width:46px;height:46px;border-radius:12px;flex:none;display:grid;place-items:center;
   background:linear-gradient(150deg,rgba(224,45,36,.2),rgba(150,22,16,.06));color:var(--ember2)}
-.opt .otitle{font-family:var(--display);font-size:20px;letter-spacing:.02em;text-transform:uppercase}
-.opt .otag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase;margin-top:3px}
-.opt .odesc{font-size:13.5px;color:var(--ash);margin-top:6px;line-height:1.4}
+.opt .otext{display:flex;flex-direction:column;gap:0;flex:1;min-width:0}
+.opt .otitle{display:block;font-family:var(--display);font-size:20px;letter-spacing:.02em;text-transform:uppercase;line-height:1.2}
+.opt .otag{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ash);text-transform:uppercase;
+  margin-top:8px;padding:4px 8px;background:rgba(176,161,147,.1);border-radius:4px}
+.opt .odesc{display:block;font-size:13.5px;color:var(--ash);margin-top:10px;line-height:1.5}
 .opt .oprice{margin-left:auto;font-family:var(--display);font-size:26px;color:var(--ember2);text-align:right;flex:none}
 .opt .oprice small{display:block;font-family:var(--mono);font-size:10px;color:var(--ash);font-weight:500}
 

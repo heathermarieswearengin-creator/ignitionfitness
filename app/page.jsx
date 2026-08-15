@@ -1528,8 +1528,12 @@ function Booking({ addBooking, go, user }) {
           <div className="opt-grid">
             {CLASSES.map((c) => (<button key={c.id} className={"opt" + (classType === c.id ? " sel" : "")} onClick={() => setClassType(c.id)}>
               <span className="oicon">{c.id === "pt" ? <User s={22} /> : <Bell s={22} />}</span>
-              <span><span className="otitle">{c.label}</span><span className="otag">{c.tag}</span><span className="odesc">{c.desc}</span></span>
-              <span className="oprice">${c.price}<small>{c.id === "pt" ? "per session" : "drop-in"}</small></span>
+              <div className="otext">
+                <span className="otitle">{c.label}</span>
+                <span className="otag">{c.tag}</span>
+                <span className="odesc">{c.desc}</span>
+              </div>
+              {!user && <span className="oprice">${c.price}<small>{c.id === "pt" ? "per session" : "drop-in"}</small></span>}
             </button>))}
           </div>
         </>)}
