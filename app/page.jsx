@@ -61,6 +61,28 @@ function Logo({ h = 44 }) {
   return <span className="logo-word">IGNITION <b>FITNESS</b></span>;
 }
 
+/* ---------- error boundary ---------- */
+class BookingErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error("Booking render error:", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="page"><div className="wrap">
+          <div className="page-head"><h1>Booking Error</h1><p>Something went wrong. Please try again.</p></div>
+          <div className="card" style={{ textAlign: "center", padding: 32 }}>
+            <p style={{ color: "var(--ash)", marginBottom: 20 }}>We couldn't complete your booking. The session may already be full or you may already have a booking at this time.</p>
+            <button className="btn btn-primary" onClick={() => { this.setState({ hasError: false }); this.props.onReset?.(); }}>Try Again</button>
+            <button className="btn btn-ghost" style={{ marginLeft: 12 }} onClick={() => this.props.go?.("home")}>Back to Home</button>
+          </div>
+        </div></div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ================= APP ================= */
 export default function App() {
   const { data: session, status } = useSession();
@@ -101,7 +123,7 @@ export default function App() {
       <Theme />
       <Nav view={view} go={go} user={user} isAdmin={isAdmin} />
       {view === "home" && <Home go={go} addLead={addLead} />}
-      {view === "book" && <Booking addBooking={addBooking} go={go} user={user} />}
+      {view === "book" && <BookingErrorBoundary key="booking-boundary" go={go}><Booking addBooking={addBooking} go={go} user={user} /></BookingErrorBoundary>}
       {view === "mine" && <MySessions go={go} user={user} status={status} />}
       <Footer go={go} />
     </div>
