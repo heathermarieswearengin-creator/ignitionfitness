@@ -523,9 +523,9 @@ function Booking({ addBooking, go, user }) {
 
         {step === 2 && (<>
           <div className="cal-header">
-            <button className="cal-arrow" onClick={prevMonth}>‹</button>
+            <button className="cal-arrow" onClick={prevMonth}>&lt;</button>
             <div className="cal-month-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
-            <button className="cal-arrow" onClick={nextMonth}>›</button>
+            <button className="cal-arrow" onClick={nextMonth}>&gt;</button>
           </div>
           <div className="booking-cal">
             <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
