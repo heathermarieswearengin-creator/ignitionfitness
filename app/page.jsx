@@ -527,9 +527,11 @@ function Booking({ addBooking, go, user }) {
             <div className="cal-nav"><button className="fbtn" onClick={prevMonth}>←</button><button className="fbtn" onClick={nextMonth}>→</button></div>
             <div className="cal-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
           </div>
-          <div className="booking-cal">
-            <div className="booking-cal-head">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="booking-cal-dow">{d}</div>)}</div>
-            <div className="booking-cal-grid">
+          <div className="booking-cal" style={{ background: "var(--f800)", border: "1.5px solid var(--line)", borderRadius: 14, padding: 16, overflow: "hidden" }}>
+            <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 10 }}>
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="booking-cal-dow">{d}</div>)}
+            </div>
+            <div className="booking-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
               {calendarDays.map(({ date, outside }, i) => {
                 const iso = date.toISOString().slice(0, 10);
                 const isPast = iso < todayIso;
