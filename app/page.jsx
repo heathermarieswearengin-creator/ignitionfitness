@@ -527,18 +527,78 @@ function Booking({ addBooking, go, user }) {
             <div style={{ fontFamily: "var(--body)", fontSize: 18, fontWeight: 600, color: "var(--bone)", minWidth: 160, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
             <button onClick={nextMonth} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--ash)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>&rarr;</button>
           </div>
-          <div className="booking-cal">
-            <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="booking-cal-dow">{d}</div>)}
+          <div style={{ padding: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 12 }}>
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+                <div key={d} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".05em", color: "var(--ash)", textTransform: "uppercase", padding: "8px 0" }}>{d}</div>
+              ))}
             </div>
-            <div className="booking-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
               {calendarDays.map(({ date, outside }, i) => {
                 const iso = date.toISOString().slice(0, 10);
                 const isPast = iso < todayIso;
                 const hasAvail = !isPast && !outside && dayHasSlots(iso);
                 const isSelected = selectedDate === iso;
                 const isToday = iso === todayIso;
-                return (<button key={i} className={"booking-cal-day" + (outside ? " outside" : "") + (isPast ? " past" : "") + (hasAvail ? " has-slots" : "") + (isSelected ? " selected" : "") + (isToday ? " today" : "")} disabled={outside || isPast || !hasAvail} onClick={() => { setSelectedDate(iso); setSelectedSlot(null); }}>{date.getUTCDate()}</button>);
+
+                const baseStyle = {
+                  width: "100%",
+                  aspectRatio: "1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "var(--body)",
+                  fontWeight: 500,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  cursor: hasAvail ? "pointer" : "not-allowed",
+                  padding: 0,
+                  transition: ".15s",
+                  border: "2px solid",
+                };
+
+                let style = { ...baseStyle };
+
+                if (outside) {
+                  style.opacity = 0;
+                  style.pointerEvents = "none";
+                  style.background = "transparent";
+                  style.borderColor = "transparent";
+                  style.color = "transparent";
+                } else if (isSelected) {
+                  style.background = "var(--ember)";
+                  style.borderColor = "var(--ember)";
+                  style.color = "#fff";
+                } else if (hasAvail) {
+                  style.background = "rgba(224,45,36,.1)";
+                  style.borderColor = "var(--ember)";
+                  style.color = "var(--bone)";
+                } else if (isPast) {
+                  style.background = "var(--f900)";
+                  style.borderColor = "var(--line)";
+                  style.color = "var(--ash)";
+                  style.opacity = 0.4;
+                } else {
+                  style.background = "var(--f900)";
+                  style.borderColor = "var(--line)";
+                  style.color = "var(--ash)";
+                  style.opacity = 0.5;
+                }
+
+                if (isToday && !isSelected) {
+                  style.boxShadow = "inset 0 0 0 2px var(--ember)";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    style={style}
+                    disabled={outside || isPast || !hasAvail}
+                    onClick={() => { setSelectedDate(iso); setSelectedSlot(null); }}
+                  >
+                    {date.getUTCDate()}
+                  </button>
+                );
               })}
             </div>
           </div>
