@@ -3,7 +3,6 @@ import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError, serializableTx } from "@/lib/tx";
 import { requireUser } from "@/lib/auth-helpers";
 import { toClientBooking } from "@/lib/shape";
-import { refundPackageCredit, spendPackageCredit } from "@/lib/packages";
 import { sendRescheduleEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -38,12 +37,9 @@ export async function POST(request, { params }) {
         throw new HttpError(403, "This booking doesn't belong to you");
       }
 
-      // Can't reschedule a cancelled or checked-in booking
+      // Can't reschedule a cancelled booking
       if (existing.status === "CANCELLED") {
         throw new HttpError(400, "Cannot reschedule a cancelled booking");
-      }
-      if (existing.status === "CHECKED_IN") {
-        throw new HttpError(400, "Cannot reschedule a checked-in booking");
       }
 
       // Can't reschedule a session that has already started
@@ -63,7 +59,7 @@ export async function POST(request, { params }) {
       }
 
       // Ensure same session type
-      if (newSession.sessionType !== existing.session.sessionType) {
+      if (newSession.type !== existing.session.type) {
         throw new HttpError(400, "Can only reschedule to the same session type");
       }
 
@@ -96,32 +92,10 @@ export async function POST(request, { params }) {
         throw new HttpError(400, "You already have a booking for that session");
       }
 
-      // Handle package credits:
-      // If the old booking used a package, refund it then spend for new booking
-      let packageResult = { memberPackageId: null, paymentStatus: existing.paymentStatus };
-      if (existing.memberPackageId) {
-        // Refund old
-        await refundPackageCredit(tx, {
-          memberPackageId: existing.memberPackageId,
-          adminId: null,
-          note: `Rescheduled from ${existing.ref}`,
-        });
-
-        // Spend a credit for the new session (will pick best available package)
-        packageResult = await spendPackageCredit(tx, {
-          userId: user.id,
-          type: newSession.sessionType,
-        });
-      }
-
       // Cancel the old booking
       await tx.booking.update({
         where: { id },
-        data: {
-          status: "CANCELLED",
-          memberPackageId: null,
-          paymentStatus: "UNPAID",
-        },
+        data: { status: "CANCELLED" },
       });
 
       // Create the new booking with same ref pattern but new ID
@@ -136,8 +110,8 @@ export async function POST(request, { params }) {
           phone: existing.phone,
           isDropIn: existing.isDropIn,
           status: "CONFIRMED",
-          paymentStatus: packageResult.paymentStatus,
-          memberPackageId: packageResult.memberPackageId,
+          paymentStatus: "UNPAID",
+          memberPackageId: null,
         },
         include: { session: true },
       });

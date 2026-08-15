@@ -4,7 +4,6 @@ import { HttpError, serializableTx, jsonError } from "@/lib/tx";
 import { isBlocked } from "@/lib/availability";
 import { minuteOfDay, studioNow } from "@/lib/config";
 import { currentUser, requireAdmin } from "@/lib/auth-helpers";
-import { spendPackageCredit } from "@/lib/packages";
 import { sendBookingConfirmation } from "@/lib/email";
 import {
   CLASS_TYPE_TO_DB,
@@ -131,13 +130,6 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
   });
   if (taken >= session.capacity) throw new HttpError(409, "That session is full.");
 
-  // Spend against a package when the member has a usable one. Credit change
-  // and its log entry are written together, inside this transaction.
-  const { memberPackageId, paymentStatus } = await spendPackageCredit(tx, {
-    userId,
-    type: session.type,
-  });
-
   return tx.booking.create({
     data: {
       ref: makeRef(),
@@ -148,8 +140,8 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
       phone: phone || null,
       isDropIn,
       status: "CONFIRMED",
-      paymentStatus,
-      memberPackageId,
+      paymentStatus: "UNPAID",
+      memberPackageId: null,
     },
     include: { session: true },
   });

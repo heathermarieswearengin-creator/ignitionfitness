@@ -2,8 +2,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError, serializableTx } from "@/lib/tx";
 import { requireUser } from "@/lib/auth-helpers";
-import { STATUS_TO_DB, toClientBooking } from "@/lib/shape";
-import { refundPackageCredit } from "@/lib/packages";
+import { toClientBooking } from "@/lib/shape";
 import { sendCancellationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -49,22 +48,9 @@ export async function PATCH(request, { params }) {
         throw new HttpError(400, "Cannot cancel a session that has already started");
       }
 
-      // Refund package credit if applicable
-      const shouldRefund = existing.memberPackageId;
-      const refunded = shouldRefund
-        ? await refundPackageCredit(tx, {
-            memberPackageId: existing.memberPackageId,
-            adminId: null, // member-initiated
-            note: `Member cancelled ${existing.ref}`,
-          })
-        : false;
-
       return tx.booking.update({
         where: { id },
-        data: {
-          status: "CANCELLED",
-          ...(refunded ? { paymentStatus: "UNPAID", memberPackageId: null } : {}),
-        },
+        data: { status: "CANCELLED" },
         include: { session: true },
       });
     });
