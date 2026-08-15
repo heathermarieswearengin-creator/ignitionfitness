@@ -522,16 +522,16 @@ function Booking({ addBooking, go, user }) {
         </>)}
 
         {step === 2 && (<>
-          <SLabel>Pick a date & time</SLabel>
-          <div className="cal-bar" style={{ padding: "0 0 16px", justifyContent: "space-between" }}>
-            <div className="cal-nav"><button className="fbtn" onClick={prevMonth}>←</button><button className="fbtn" onClick={nextMonth}>→</button></div>
-            <div className="cal-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
+          <div className="cal-header">
+            <button className="cal-arrow" onClick={prevMonth}>‹</button>
+            <div className="cal-month-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
+            <button className="cal-arrow" onClick={nextMonth}>›</button>
           </div>
-          <div className="booking-cal" style={{ background: "var(--f800)", border: "1.5px solid var(--line)", borderRadius: 14, padding: 16, overflow: "hidden" }}>
-            <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 10 }}>
+          <div className="booking-cal">
+            <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d} className="booking-cal-dow">{d}</div>)}
             </div>
-            <div className="booking-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+            <div className="booking-cal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
               {calendarDays.map(({ date, outside }, i) => {
                 const iso = date.toISOString().slice(0, 10);
                 const isPast = iso < todayIso;
