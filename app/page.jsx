@@ -360,25 +360,46 @@ function MySessions({ go, user, status }) {
       </div>
 
       {/* Action cards */}
-      <div className="my-sessions-actions">
-        <button className="ms-action-card primary" onClick={() => go("book")}>
-          <div className="ms-action-icon"><Flame s={32} /></div>
-          <div className="ms-action-text">
-            <span className="ms-action-title">Book a Session</span>
-            <span className="ms-action-sub">Find your next class or 1:1</span>
+      <div className="my-sessions-actions" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 32 }}>
+        <button
+          className="ms-action-card primary"
+          onClick={() => go("book")}
+          style={{
+            display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
+            width: "100%", textAlign: "left", padding: "18px 20px",
+            background: "linear-gradient(135deg, #e02d24, #c9251c)",
+            border: "none", borderRadius: 14, color: "#f3ece1",
+            cursor: "pointer", WebkitAppearance: "none"
+          }}
+        >
+          <div style={{ width: 48, height: 48, minWidth: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.12)" }}>
+            <Flame s={28} />
           </div>
-          <Arrow s={20} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontFamily: "var(--display)", fontSize: 17, textTransform: "uppercase", lineHeight: 1.2 }}>Book a Session</span>
+            <span style={{ fontSize: 12, opacity: 0.8 }}>Find your next class or 1:1</span>
+          </div>
         </button>
-        <button className="ms-action-card" onClick={() => {
-          const el = document.getElementById("upcoming");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-        }}>
-          <div className="ms-action-icon"><Clock s={32} /></div>
-          <div className="ms-action-text">
-            <span className="ms-action-title">View All Sessions</span>
-            <span className="ms-action-sub">Past and upcoming history</span>
+        <button
+          className="ms-action-card"
+          onClick={() => {
+            const el = document.getElementById("upcoming");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
+          style={{
+            display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
+            width: "100%", textAlign: "left", padding: "18px 20px",
+            background: "#1d1411", border: "2px solid #3a261d", borderRadius: 14,
+            color: "#f3ece1", cursor: "pointer", WebkitAppearance: "none"
+          }}
+        >
+          <div style={{ width: 48, height: 48, minWidth: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(224,45,36,0.12)", color: "#f0ab33" }}>
+            <Clock s={28} />
           </div>
-          <Arrow s={20} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontFamily: "var(--display)", fontSize: 17, textTransform: "uppercase", lineHeight: 1.2 }}>View All Sessions</span>
+            <span style={{ fontSize: 12, color: "#b0a193" }}>Past and upcoming history</span>
+          </div>
         </button>
       </div>
 
