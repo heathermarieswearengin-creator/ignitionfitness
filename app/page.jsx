@@ -358,41 +358,83 @@ function MySessions({ go, user, status }) {
     </svg>
   );
 
-  // Featured "Next Session" card - prominent styling
+  // Featured "Next Session" card - prominent styling with inline fallbacks
   const FeaturedSessionCard = ({ b }) => (
-    <div className="featured-session-card">
-      <div className="featured-session-header">
-        <div className="featured-session-badge">
-          <span className="next-label">Next Session</span>
-          <span className={`status-pill status-${b.status}`}>{b.status.replace("-", " ")}</span>
+    <div className="featured-session-card" style={{
+      background: "linear-gradient(145deg, #1d1411 0%, #281a15 100%)",
+      border: "2px solid #c9251c",
+      borderRadius: 18,
+      overflow: "hidden",
+      boxShadow: "0 4px 24px rgba(201,37,28,.15)"
+    }}>
+      <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", justifyContent: "space-between" }}>
+          <span style={{
+            fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, letterSpacing: ".16em",
+            textTransform: "uppercase", color: "#f0ab33",
+            background: "rgba(240,171,51,.12)", padding: "6px 12px", borderRadius: 20
+          }}>Next Session</span>
+          <span style={{
+            fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600, letterSpacing: ".08em",
+            textTransform: "uppercase", padding: "6px 12px", borderRadius: 20,
+            background: b.status === "confirmed" ? "rgba(34,197,94,.15)" : "rgba(251,191,36,.15)",
+            color: b.status === "confirmed" ? "#22c55e" : "#fbbf24"
+          }}>{b.status.replace("-", " ")}</span>
         </div>
       </div>
-      <div className="featured-session-content">
-        <div className="featured-session-icon">
+      <div style={{ padding: 20, display: "flex", alignItems: "center", gap: 18 }}>
+        <div style={{
+          width: 56, height: 56, minWidth: 56, borderRadius: 14,
+          display: "grid", placeItems: "center",
+          background: "linear-gradient(150deg, rgba(224,45,36,.22), rgba(150,22,16,.08))",
+          color: "#f0ab33"
+        }}>
           {b.classType === "GROUP" || b.classType === "group" ? <Bell s={28} /> : <User s={28} />}
         </div>
-        <div className="featured-session-details">
-          <div className="featured-session-type">{CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-          <div className="featured-session-when">{fmtDate(b.date)} · {b.time}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#f3ece1", marginBottom: 4 }}>
+            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 13, color: "#b0a193", letterSpacing: ".02em" }}>
+            {fmtDate(b.date)} · {b.time}
+          </div>
         </div>
       </div>
-      <div className="featured-session-actions">
-        <button className="session-btn secondary" onClick={() => openReschedule(b)}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "0 20px 16px" }}>
+        <button onClick={() => openReschedule(b)} style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".05em",
+          textTransform: "uppercase", padding: "12px 16px", borderRadius: 10,
+          cursor: "pointer", background: "transparent", border: "1.5px solid #3a261d", color: "#f3ece1"
+        }}>
           <CalendarIcon s={16} />
           <span>Reschedule</span>
         </button>
-        <button className="session-btn danger" onClick={() => openCancel(b)}>
+        <button onClick={() => openCancel(b)} style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".05em",
+          textTransform: "uppercase", padding: "12px 16px", borderRadius: 10,
+          cursor: "pointer", background: "rgba(239,68,68,.08)", border: "1.5px solid rgba(239,68,68,.3)", color: "#ef4444"
+        }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
           <span>Cancel</span>
         </button>
       </div>
-      <div className="featured-session-divider"></div>
-      <div className="featured-session-calendar">
-        <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" className="calendar-link">
+      <div style={{ height: 1, background: "#3a261d", margin: "0 20px" }}></div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, padding: "16px 20px" }}>
+        <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 500, letterSpacing: ".03em",
+          color: "#b0a193", textDecoration: "none", padding: "6px 0"
+        }}>
           <CalendarIcon s={16} />
           <span>Google Calendar</span>
         </a>
-        <a href={`/api/bookings/${b.id}/ics`} className="calendar-link">
+        <a href={`/api/bookings/${b.id}/ics`} style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 500, letterSpacing: ".03em",
+          color: "#b0a193", textDecoration: "none", padding: "6px 0"
+        }}>
           <DownloadIcon s={16} />
           <span>Download .ics</span>
         </a>
@@ -400,39 +442,71 @@ function MySessions({ go, user, status }) {
     </div>
   );
 
-  // Compact card for secondary sessions
+  // Compact card for secondary sessions with inline styles
   const CompactSessionCard = ({ b, isExpanded, onToggle }) => (
-    <div className={`compact-session-card ${isExpanded ? "expanded" : ""}`}>
-      <button className="compact-session-main" onClick={onToggle}>
-        <div className="compact-session-icon">
+    <div style={{
+      background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 14,
+      overflow: "hidden", borderColor: isExpanded ? "rgba(224,45,36,.4)" : "#3a261d"
+    }}>
+      <button onClick={onToggle} style={{
+        display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "16px 18px",
+        background: "transparent", border: "none", cursor: "pointer", textAlign: "left"
+      }}>
+        <div style={{
+          width: 42, height: 42, minWidth: 42, borderRadius: 11,
+          display: "grid", placeItems: "center",
+          background: "rgba(240,171,51,.1)", color: "#b0a193"
+        }}>
           {b.classType === "GROUP" || b.classType === "group" ? <Bell s={20} /> : <User s={20} />}
         </div>
-        <div className="compact-session-info">
-          <div className="compact-session-type">{CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-          <div className="compact-session-when">{fmtDate(b.date)} · {b.time}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#f3ece1", marginBottom: 2 }}>
+            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", letterSpacing: ".02em" }}>
+            {fmtDate(b.date)} · {b.time}
+          </div>
         </div>
-        <div className={`compact-session-chevron ${isExpanded ? "rotated" : ""}`}>
+        <div style={{ color: "#78716c", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
           <ChevronDown s={18} />
         </div>
       </button>
       {isExpanded && (
-        <div className="compact-session-expanded">
-          <div className="compact-session-actions">
-            <button className="session-btn secondary small" onClick={() => openReschedule(b)}>
+        <div style={{ padding: "0 18px 16px", borderTop: "1px solid #281a15", paddingTop: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <button onClick={() => openReschedule(b)} style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
+              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
+              cursor: "pointer", background: "transparent", border: "1.5px solid #3a261d", color: "#f3ece1"
+            }}>
               <CalendarIcon s={14} />
               <span>Reschedule</span>
             </button>
-            <button className="session-btn danger small" onClick={() => openCancel(b)}>
+            <button onClick={() => openCancel(b)} style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
+              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
+              cursor: "pointer", background: "rgba(239,68,68,.08)", border: "1.5px solid rgba(239,68,68,.3)", color: "#ef4444"
+            }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
               <span>Cancel</span>
             </button>
           </div>
-          <div className="compact-session-calendar">
-            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" className="calendar-link small">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, paddingTop: 10, borderTop: "1px solid #281a15" }}>
+            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
+              color: "#b0a193", textDecoration: "none"
+            }}>
               <CalendarIcon s={14} />
               <span>Google</span>
             </a>
-            <a href={`/api/bookings/${b.id}/ics`} className="calendar-link small">
+            <a href={`/api/bookings/${b.id}/ics`} style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
+              color: "#b0a193", textDecoration: "none"
+            }}>
               <DownloadIcon s={14} />
               <span>.ics</span>
             </a>
@@ -517,17 +591,25 @@ function MySessions({ go, user, status }) {
 
               {/* Remaining sessions - collapsed by default */}
               {data.upcoming.length > 1 && (
-                <div className="remaining-sessions">
+                <div style={{ marginTop: 8 }}>
                   <button
-                    className={`view-all-toggle ${showAllSessions ? "expanded" : ""}`}
                     onClick={() => setShowAllSessions(!showAllSessions)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", padding: "14px 20px",
+                      background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 12,
+                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".06em",
+                      textTransform: "uppercase", color: "#b0a193", cursor: "pointer"
+                    }}
                   >
                     <span>{showAllSessions ? "Hide" : "View all"} sessions ({data.upcoming.length - 1} more)</span>
-                    <ChevronDown s={18} />
+                    <span style={{ transform: showAllSessions ? "rotate(180deg)" : "none", transition: "transform .2s", display: "flex" }}>
+                      <ChevronDown s={18} />
+                    </span>
                   </button>
 
                   {showAllSessions && (
-                    <div className="remaining-sessions-list">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
                       {data.upcoming.slice(1).map((b) => (
                         <CompactSessionCard
                           key={b.id}
