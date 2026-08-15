@@ -309,6 +309,7 @@ function MySessions({ go, user, status }) {
     setSelectedSlot(null);
     setRescheduleStep(1);
     setRescheduleError(null);
+    setRescheduleSuccess(null);
   };
 
   const confirmReschedule = async () => {
