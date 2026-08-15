@@ -54,6 +54,7 @@ const Clock = ({ s = 22 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fil
 const User = ({ s = 22 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
 const Lock = ({ s = 26 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2"/></svg>);
 const Arrow = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>);
+const CalendarIcon = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
 
 function Logo({ h = 44 }) {
   if (LOGO_URL && !LOGO_URL.includes("__")) return <img src={LOGO_URL} alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
@@ -322,72 +323,114 @@ function MySessions({ go, user, status }) {
   const [selectedDate, setSelectedDate] = useState(null);
 
   const SessionCard = ({ b }) => (
-    <div className="sess-card">
-      <div className="sess-info">
-        <div className="sess-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-        <div className="sess-when">{fmtDate(b.date)} · {b.time}</div>
-        <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
-      </div>
-      <div className="sess-actions">
-        <div className="cal-links" style={{ marginBottom: 10 }}>
-          <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Google Calendar</a>
-          <a href={`/api/bookings/${b.id}/ics`}>.ics</a>
+    <div className="sess-row">
+      <div className="sess-row-left">
+        <div className="sess-row-icon">
+          {b.classType === "GROUP" ? <Flame s={20} /> : <Clock s={20} />}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "10px 12px" }} onClick={() => openReschedule(b)}>Reschedule</button>
-          <button className="btn btn-cancel" style={{ flex: 1, fontSize: 13, padding: "10px 12px" }} onClick={() => openCancel(b)}>Cancel</button>
+        <div className="sess-row-info">
+          <div className="sess-row-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+          <div className="sess-row-when">{fmtDate(b.date)} · {b.time}</div>
+        </div>
+      </div>
+      <div className="sess-row-right">
+        <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+        <div className="sess-row-actions">
+          <button className="sess-action-btn" onClick={() => openReschedule(b)}>Reschedule</button>
+          <button className="sess-action-btn cancel" onClick={() => openCancel(b)}>Cancel</button>
+        </div>
+        <div className="sess-row-cal">
+          <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">
+            <CalendarIcon s={14} /> Google
+          </a>
+          <a href={`/api/bookings/${b.id}/ics`}>
+            <CalendarIcon s={14} /> .ics
+          </a>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="page"><div className="wrap">
+    <div className="page my-sessions-page"><div className="wrap my-sessions-wrap">
       {/* Greeting */}
-      <div className="page-head" style={{ textAlign: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28 }}>Welcome back, {firstName}</h1>
+      <div className="my-sessions-greeting">
+        <span className="greeting-label">Welcome back</span>
+        <h1 className="greeting-name">{firstName}</h1>
       </div>
 
       {/* Action cards */}
-      <div className="action-cards">
-        <button className="action-card primary" onClick={() => go("book")}>
-          <Flame s={28} />
-          <span>Book a Session</span>
+      <div className="my-sessions-actions">
+        <button className="ms-action-card primary" onClick={() => go("book")}>
+          <div className="ms-action-icon"><Flame s={32} /></div>
+          <div className="ms-action-text">
+            <span className="ms-action-title">Book a Session</span>
+            <span className="ms-action-sub">Find your next class or 1:1</span>
+          </div>
+          <Arrow s={20} />
         </button>
-        <a className="action-card" href="#upcoming">
-          <Clock s={28} />
-          <span>View Upcoming</span>
-        </a>
+        <button className="ms-action-card" onClick={() => {
+          const el = document.getElementById("upcoming");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }}>
+          <div className="ms-action-icon"><Clock s={32} /></div>
+          <div className="ms-action-text">
+            <span className="ms-action-title">View All Sessions</span>
+            <span className="ms-action-sub">Past and upcoming history</span>
+          </div>
+          <Arrow s={20} />
+        </button>
       </div>
 
       {/* Upcoming sessions */}
-      <div id="upcoming" className="panel" style={{ marginTop: 32, marginBottom: 18 }}>
-        <div className="panel-h"><h3>Upcoming Sessions</h3><span className="cnt">{data.upcoming.length}</span></div>
-        {loading && <div className="empty">Loading…</div>}
-        {!loading && data.upcoming.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-icon"><Bell s={40} /></div>
-            <h3>No upcoming sessions</h3>
-            <p>You don't have any sessions booked yet. Ready to get started?</p>
-            <button className="btn btn-primary" onClick={() => go("book")}>Book Your First Session</button>
-          </div>
-        )}
-        {data.upcoming.map((b) => <SessionCard key={b.id} b={b} />)}
+      <div id="upcoming" className="my-sessions-panel">
+        <div className="ms-panel-header">
+          <h2>Upcoming Sessions</h2>
+          {data.upcoming.length > 0 && <span className="ms-panel-count">{data.upcoming.length}</span>}
+        </div>
+        <div className="ms-panel-body">
+          {loading && <div className="ms-loading">Loading…</div>}
+          {!loading && data.upcoming.length === 0 && (
+            <div className="ms-empty-state">
+              <div className="ms-empty-icon"><Bell s={48} /></div>
+              <h3>No upcoming sessions</h3>
+              <p>You don't have any sessions booked yet.<br />Ready to ignite your fitness journey?</p>
+              <button className="btn btn-primary" onClick={() => go("book")}>Book Your First Session</button>
+            </div>
+          )}
+          {!loading && data.upcoming.length > 0 && (
+            <div className="ms-sessions-list">
+              {data.upcoming.map((b) => <SessionCard key={b.id} b={b} />)}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Past sessions */}
       {data.past.length > 0 && (
-        <div className="panel">
-          <div className="panel-h"><h3>Past &amp; Cancelled</h3><span className="cnt">{data.past.length}</span></div>
-          {data.past.map((b) => (
-            <div key={b.id} className="mysess past">
-              <div className="ms-when">
-                <div className="ms-d">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-                <div className="ms-t">{fmtDate(b.date)} · {b.time}</div>
-              </div>
-              <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+        <div className="my-sessions-panel past-panel">
+          <div className="ms-panel-header">
+            <h2>Past &amp; Cancelled</h2>
+            <span className="ms-panel-count">{data.past.length}</span>
+          </div>
+          <div className="ms-panel-body">
+            <div className="ms-sessions-list">
+              {data.past.map((b) => (
+                <div key={b.id} className="sess-row past">
+                  <div className="sess-row-left">
+                    <div className="sess-row-icon muted">
+                      {b.classType === "GROUP" ? <Flame s={20} /> : <Clock s={20} />}
+                    </div>
+                    <div className="sess-row-info">
+                      <div className="sess-row-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+                      <div className="sess-row-when">{fmtDate(b.date)} · {b.time}</div>
+                    </div>
+                  </div>
+                  <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
 

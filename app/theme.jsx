@@ -605,36 +605,127 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .booking-cal-dow{font-size:8px;padding:4px 0}
 }
 
-/* My Sessions - Action Cards */
-.action-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:440px;margin:0 auto}
-.action-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  background:var(--f900);border:1.5px solid var(--line);border-radius:14px;padding:24px 18px;
-  color:var(--bone);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;text-decoration:none;cursor:pointer;transition:.2s}
-.action-card:hover{border-color:var(--ember);transform:translateY(-2px)}
-.action-card.primary{background:linear-gradient(150deg,var(--flame),var(--ember));border-color:transparent;
-  box-shadow:0 8px 26px rgba(224,45,36,.32)}
-.action-card.primary:hover{box-shadow:0 12px 34px rgba(224,45,36,.5);transform:translateY(-3px)}
+/* ========== MY SESSIONS PAGE REDESIGN ========== */
 
-/* My Sessions - Session Cards */
-.sess-card{background:var(--f900);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;
-  margin-bottom:12px}
-.sess-card:last-child{margin-bottom:0}
-.sess-info{margin-bottom:14px}
-.sess-type{font-size:16px;font-weight:700;margin-bottom:4px}
-.sess-when{font-family:var(--mono);font-size:12px;color:var(--ash);margin-bottom:8px}
-.sess-actions .cal-links{margin-bottom:10px}
+/* Page wrapper */
+.my-sessions-page{padding:60px 0 100px}
+.my-sessions-wrap{max-width:720px}
 
-/* My Sessions - Past sessions */
-.mysess.past{opacity:.7}
-.mysess.past .ms-d{font-weight:600}
+/* Greeting */
+.my-sessions-greeting{text-align:center;margin-bottom:40px}
+.greeting-label{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.2em;
+  color:var(--ash);text-transform:uppercase;margin-bottom:8px}
+.greeting-name{font-family:var(--display);font-size:clamp(42px,8vw,64px);text-transform:uppercase;
+  line-height:.95;letter-spacing:.01em}
+
+/* Action cards */
+.my-sessions-actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px}
+.ms-action-card{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+  background:var(--f900);border:2px solid var(--line);border-radius:16px;padding:22px 24px;
+  color:var(--bone);cursor:pointer;transition:all .2s ease}
+.ms-action-card:hover{border-color:var(--ember);transform:translateY(-3px);
+  box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.ms-action-card.primary{background:linear-gradient(135deg,var(--flame) 0%,var(--ember) 100%);
+  border-color:transparent;box-shadow:0 8px 28px rgba(224,45,36,.35)}
+.ms-action-card.primary:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(224,45,36,.45)}
+.ms-action-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;flex:none;
+  background:rgba(255,255,255,.1)}
+.ms-action-card:not(.primary) .ms-action-icon{background:linear-gradient(150deg,rgba(224,45,36,.15),rgba(150,22,16,.05));
+  color:var(--ember2)}
+.ms-action-text{flex:1;min-width:0}
+.ms-action-title{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase;
+  letter-spacing:.02em;line-height:1.1}
+.ms-action-sub{display:block;font-size:13px;color:rgba(255,255,255,.7);margin-top:4px;font-weight:500}
+.ms-action-card:not(.primary) .ms-action-sub{color:var(--ash)}
+.ms-action-card > svg{flex:none;opacity:.6;transition:.15s}
+.ms-action-card:hover > svg{opacity:1;transform:translateX(3px)}
+
+/* Sessions panel */
+.my-sessions-panel{background:var(--f900);border:1.5px solid var(--line);border-radius:20px;
+  overflow:hidden;margin-bottom:24px}
+.my-sessions-panel.past-panel{opacity:.85}
+.ms-panel-header{display:flex;align-items:center;justify-content:space-between;
+  padding:20px 28px;border-bottom:1px solid var(--line)}
+.ms-panel-header h2{font-family:var(--display);font-size:22px;text-transform:uppercase;
+  letter-spacing:.02em}
+.ms-panel-count{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ember2);
+  background:rgba(224,45,36,.15);padding:5px 12px;border-radius:20px}
+.ms-panel-body{padding:24px 28px}
+.ms-loading{text-align:center;color:var(--ash);font-family:var(--mono);font-size:13px;padding:40px 0}
 
 /* Empty state */
-.empty-state{padding:50px 24px;text-align:center}
-.empty-icon{width:80px;height:80px;border-radius:20px;margin:0 auto 20px;display:grid;place-items:center;
-  background:var(--f800);border:1px solid var(--line);color:var(--ember2)}
-.empty-state h3{font-family:var(--display);font-size:24px;text-transform:uppercase;margin-bottom:10px}
-.empty-state p{color:var(--ash);font-size:14px;margin-bottom:24px;max-width:280px;margin-left:auto;margin-right:auto}
+.ms-empty-state{text-align:center;padding:48px 20px 56px}
+.ms-empty-icon{width:100px;height:100px;border-radius:24px;margin:0 auto 28px;display:grid;place-items:center;
+  background:linear-gradient(150deg,var(--f800),var(--f700));border:1.5px solid var(--line);color:var(--ember2)}
+.ms-empty-state h3{font-family:var(--display);font-size:28px;text-transform:uppercase;margin-bottom:12px}
+.ms-empty-state p{color:var(--ash);font-size:15px;line-height:1.6;margin-bottom:28px;max-width:300px;margin-left:auto;margin-right:auto}
+.ms-empty-state .btn{padding:14px 32px;font-size:13px}
+
+/* Session rows */
+.ms-sessions-list{display:flex;flex-direction:column;gap:12px}
+.sess-row{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:var(--f800);border:1.5px solid var(--line);border-radius:14px;padding:18px 22px;
+  transition:border-color .15s}
+.sess-row:hover{border-color:rgba(224,45,36,.4)}
+.sess-row.past{opacity:.65}
+.sess-row.past:hover{border-color:var(--line)}
+.sess-row-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
+.sess-row-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(150deg,rgba(224,45,36,.18),rgba(150,22,16,.06));color:var(--ember2)}
+.sess-row-icon.muted{background:var(--f700);color:var(--ash)}
+.sess-row-info{flex:1;min-width:0}
+.sess-row-type{font-size:16px;font-weight:700;margin-bottom:3px}
+.sess-row-when{font-family:var(--mono);font-size:12px;color:var(--ash);letter-spacing:.02em}
+.sess-row-right{display:flex;align-items:center;gap:14px;flex:none}
+.sess-row-right .badge{margin-right:6px}
+.sess-row-actions{display:flex;gap:8px}
+.sess-action-btn{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;padding:10px 14px;border-radius:8px;cursor:pointer;transition:.15s;
+  background:transparent;border:1.5px solid var(--line);color:var(--bone)}
+.sess-action-btn:hover{border-color:var(--ember);color:var(--ember2)}
+.sess-action-btn.cancel{color:var(--flame);border-color:rgba(224,45,36,.3)}
+.sess-action-btn.cancel:hover{background:rgba(150,22,16,.2);border-color:var(--flame)}
+.sess-row-cal{display:flex;gap:12px}
+.sess-row-cal a{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--ash);text-decoration:none;transition:.15s}
+.sess-row-cal a:hover{color:var(--ember2)}
+
+/* Tablet adjustments */
+@media(max-width:768px){
+  .my-sessions-wrap{max-width:100%}
+  .my-sessions-actions{gap:12px}
+  .ms-action-card{padding:18px 20px;gap:14px}
+  .ms-action-icon{width:48px;height:48px;border-radius:12px}
+  .ms-action-title{font-size:17px}
+  .ms-action-sub{font-size:12px}
+  .ms-panel-header{padding:16px 20px}
+  .ms-panel-body{padding:20px}
+  .sess-row{flex-direction:column;align-items:stretch;gap:14px;padding:16px 18px}
+  .sess-row-left{width:100%}
+  .sess-row-right{justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .sess-row-actions{order:1}
+  .sess-row-cal{order:2}
+}
+
+/* Mobile adjustments */
+@media(max-width:500px){
+  .my-sessions-page{padding:40px 0 80px}
+  .my-sessions-greeting{margin-bottom:32px}
+  .greeting-label{font-size:11px;margin-bottom:6px}
+  .my-sessions-actions{grid-template-columns:1fr;gap:10px;margin-bottom:36px}
+  .ms-action-card{padding:16px 18px}
+  .ms-action-icon{width:44px;height:44px}
+  .ms-action-title{font-size:16px}
+  .ms-action-card > svg{display:none}
+  .ms-panel-header h2{font-size:18px}
+  .ms-empty-state{padding:36px 16px 44px}
+  .ms-empty-icon{width:80px;height:80px;border-radius:20px}
+  .ms-empty-state h3{font-size:24px}
+  .ms-empty-state p{font-size:14px}
+  .sess-row-icon{width:40px;height:40px}
+  .sess-row-type{font-size:15px}
+  .sess-action-btn{padding:9px 12px;font-size:10px}
+}
 
 /* Cancel button variant */
 .btn-cancel{background:rgba(150,22,16,.2);color:var(--flame);border:1px solid rgba(224,45,36,.3)}
