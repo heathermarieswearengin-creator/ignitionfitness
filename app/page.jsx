@@ -1326,6 +1326,9 @@ function Booking({ addBooking, go, user }) {
   const [classType, setClassType] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  // Multi-session booking state
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [selectedSlots, setSelectedSlots] = useState([]);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [done, setDone] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -1361,29 +1364,32 @@ function Booking({ addBooking, go, user }) {
 
   const reset = () => {
     setDone(null); setStep(1); setClassType(null); setSelectedDate(null);
-    setSelectedSlot(null); setError(null);
+    setSelectedSlot(null); setMultiSelect(false); setSelectedSlots([]); setError(null);
     setForm({ name: user?.name || "", email: user?.email || "", phone: "" });
   };
 
   const confirm = async () => {
-    if (saving || !selectedSlot) return;
+    // In multi-select mode, use selectedSlots; otherwise use selectedSlot
+    const slotsToBook = multiSelect ? selectedSlots : (selectedSlot ? [selectedSlot] : []);
+    if (saving || slotsToBook.length === 0) return;
     setSaving(true);
     setError(null);
     try {
       const created = await addBooking({
-        items: [{ sessionId: selectedSlot.sessionId }],
+        items: slotsToBook.map(s => ({ sessionId: s.sessionId })),
         contact: user
           ? { phone: form.phone.trim() }
           : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
       });
 
-      // Ensure we have valid booking data before showing confirmation
-      const booking = Array.isArray(created) ? created[0] : created;
-      if (!booking || !booking.ref) {
+      // Handle array of bookings for multi-select
+      const bookings = Array.isArray(created) ? created : [created];
+      if (!bookings.length || !bookings[0]?.ref) {
         throw new Error("Booking was created but confirmation data is missing. Please check your bookings.");
       }
 
-      setDone(booking);
+      // Store all bookings for confirmation display
+      setDone(bookings);
       setStep(5);
       reloadSlots();
     } catch (e) {
@@ -1401,51 +1407,77 @@ function Booking({ addBooking, go, user }) {
     }
   };
 
-  if (done && done.ref) {
-    const price = CLASS_MAP[done.classType]?.price ?? 0;
-    const firstName = (done.name || "").split(" ")[0] || "there";
-    const sessionLabel = CLASS_MAP[done.classType]?.label || (done.classType === "pt" ? "Personal Training" : "Group Class");
-
-    // Build calendar URL safely - only if we have the required fields
-    const canShowCalendar = done.sessionType && done.startTime && done.date;
-    const calUrl = canShowCalendar ? googleCalendarUrl(done) : null;
+  // done is now an array of bookings
+  const bookings = Array.isArray(done) ? done : (done ? [done] : []);
+  if (bookings.length > 0 && bookings[0]?.ref) {
+    const firstBooking = bookings[0];
+    const totalPrice = bookings.reduce((sum, b) => sum + (CLASS_MAP[b.classType]?.price ?? 0), 0);
+    const firstName = (firstBooking.name || "").split(" ")[0] || "there";
+    const isMulti = bookings.length > 1;
 
     return (
       <div className="page"><div className="wrap"><div className="confirm">
         <div className="seal"><Check s={42} /></div>
-        <h1>You're Booked!</h1>
+        <h1>{isMulti ? `${bookings.length} Sessions Booked!` : "You're Booked!"}</h1>
         <p style={{ color: "var(--ash)", fontSize: 16, maxWidth: 400, margin: "0 auto" }}>
-          See you at the bell, {firstName}. A confirmation email is on its way to {done.email || "your inbox"}.
+          See you at the bell, {firstName}. A confirmation email is on its way to {firstBooking.email || "your inbox"}.
         </p>
-        <div className="ref">CONFIRMATION · {done.ref}</div>
 
-        <div className="summary" style={{ marginTop: 24, textAlign: "left" }}>
-          <div className="srow">
-            <span className="k">Session</span>
-            <span className="v">{sessionLabel}</span>
-          </div>
-          <div className="srow">
-            <span className="k">Date & Time</span>
-            <span className="v">{done.date ? fmtDate(done.date) : "—"} · {done.time || "—"}</span>
-          </div>
-          <div className="srow">
-            <span className="k">Location</span>
-            <span className="v">{STUDIO.addressLine}</span>
-          </div>
-          <div className="srow total">
-            <span className="k">Due at studio</span>
-            <span className="v">${price}</span>
-          </div>
+        {/* Show all booked sessions */}
+        <div style={{ marginTop: 24 }}>
+          {bookings.map((b, i) => {
+            const sessionLabel = CLASS_MAP[b.classType]?.label || (b.classType === "pt" ? "Personal Training" : "Group Class");
+            const canShowCalendar = b.sessionType && b.startTime && b.date;
+            const calUrl = canShowCalendar ? googleCalendarUrl(b) : null;
+            const price = CLASS_MAP[b.classType]?.price ?? 0;
+
+            return (
+              <div key={b.id} className="summary" style={{ marginBottom: isMulti ? 16 : 0, textAlign: "left" }}>
+                {isMulti && (
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".1em", color: "var(--ember2)", textTransform: "uppercase", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                    Session {i + 1} · {b.ref}
+                  </div>
+                )}
+                {!isMulti && <div className="ref" style={{ marginBottom: 16 }}>CONFIRMATION · {b.ref}</div>}
+                <div className="srow">
+                  <span className="k">Session</span>
+                  <span className="v">{sessionLabel}</span>
+                </div>
+                <div className="srow">
+                  <span className="k">Date & Time</span>
+                  <span className="v">{b.date ? fmtDate(b.date) : "—"} · {b.time || "—"}</span>
+                </div>
+                <div className="srow">
+                  <span className="k">Location</span>
+                  <span className="v">{STUDIO.addressLine}</span>
+                </div>
+                {!isMulti && (
+                  <div className="srow total">
+                    <span className="k">Due at studio</span>
+                    <span className="v">${price}</span>
+                  </div>
+                )}
+                {canShowCalendar && (
+                  <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                    <a href={calUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ash)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                      <CalendarIcon s={14} /> Google
+                    </a>
+                    <a href={`/api/bookings/${b.id}/ics`} style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ash)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> .ics
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {canShowCalendar && (
-          <div className="cal-links" style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
-            <a href={calUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ fontSize: 13 }}>
-              Add to Google Calendar
-            </a>
-            <a href={`/api/bookings/${done.id}/ics`} className="btn btn-ghost" style={{ fontSize: 13 }}>
-              Download .ics
-            </a>
+        {isMulti && (
+          <div className="summary" style={{ marginTop: 8, textAlign: "left" }}>
+            <div className="srow total">
+              <span className="k">Total due at studio</span>
+              <span className="v">${totalPrice}</span>
+            </div>
           </div>
         )}
 
@@ -1463,7 +1495,9 @@ function Booking({ addBooking, go, user }) {
   }
 
   const contactOk = user ? true : form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7;
-  const canNext = (step === 1 && classType) || (step === 2 && selectedSlot) || (step === 3 && contactOk);
+  // In multi-select mode, require at least one slot selected; otherwise require selectedSlot
+  const hasSlotSelected = multiSelect ? selectedSlots.length > 0 : !!selectedSlot;
+  const canNext = (step === 1 && classType) || (step === 2 && hasSlotSelected) || (step === 3 && contactOk);
 
   const calendarDays = useMemo(() => {
     const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
@@ -1501,6 +1535,41 @@ function Booking({ addBooking, go, user }) {
         </>)}
 
         {step === 2 && (<>
+          {/* Multi-select toggle and month nav */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--bone)" }}>Pick a date</div>
+            <button
+              onClick={() => {
+                setMultiSelect(!multiSelect);
+                // When switching modes, clear selections
+                if (!multiSelect) {
+                  // Switching to multi: start fresh
+                  setSelectedSlots([]);
+                } else {
+                  // Switching to single: clear array
+                  setSelectedSlot(null);
+                  setSelectedSlots([]);
+                }
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 20,
+                fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".04em",
+                cursor: "pointer", transition: ".15s",
+                border: multiSelect ? "1.5px solid var(--ember)" : "1.5px solid var(--line)",
+                background: multiSelect ? "rgba(224,45,36,.15)" : "transparent",
+                color: multiSelect ? "var(--ember2)" : "var(--ash)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              {multiSelect ? "Multi-select on" : "Book multiple"}
+            </button>
+          </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 24 }}>
             <button onClick={prevMonth} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--ash)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>&larr;</button>
             <div style={{ fontFamily: "var(--body)", fontSize: 18, fontWeight: 600, color: "var(--bone)", minWidth: 160, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
@@ -1519,6 +1588,8 @@ function Booking({ addBooking, go, user }) {
                 const hasAvail = !isPast && !outside && dayHasSlots(iso);
                 const isSelected = selectedDate === iso;
                 const isToday = iso === todayIso;
+                // Count how many slots are selected for this date (multi-select mode)
+                const selectedCountForDate = multiSelect ? selectedSlots.filter(s => s.date === iso).length : 0;
 
                 const baseStyle = {
                   width: "100%",
@@ -1534,6 +1605,7 @@ function Booking({ addBooking, go, user }) {
                   padding: 0,
                   transition: ".15s",
                   border: "2px solid",
+                  position: "relative",
                 };
 
                 let style = { ...baseStyle };
@@ -1576,6 +1648,18 @@ function Booking({ addBooking, go, user }) {
                     onClick={() => { setSelectedDate(iso); setSelectedSlot(null); }}
                   >
                     {date.getUTCDate()}
+                    {/* Badge showing count of selected slots for this date */}
+                    {selectedCountForDate > 0 && (
+                      <span style={{
+                        position: "absolute", top: 2, right: 2,
+                        width: 16, height: 16, borderRadius: "50%",
+                        background: "var(--ember)", color: "#fff",
+                        fontSize: 10, fontWeight: 700, fontFamily: "var(--mono)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {selectedCountForDate}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1585,10 +1669,29 @@ function Booking({ addBooking, go, user }) {
             <SLabel>Available times on {fmtDate(selectedDate)}</SLabel>
             <div className="slot-grid">
               {slotsForDate(selectedDate).map((s) => {
-                const isSelected = selectedSlot?.sessionId === s.sessionId;
+                const isSelectedSingle = !multiSelect && selectedSlot?.sessionId === s.sessionId;
+                const isSelectedMulti = multiSelect && selectedSlots.some(sl => sl.sessionId === s.sessionId);
+                const isSelected = isSelectedSingle || isSelectedMulti;
                 const isFull = s.spotsLeft === 0;
                 const spotClass = isFull ? "spots-none" : s.spotsLeft <= 3 ? "spots-low" : "spots-ok";
-                return (<button key={s.sessionId} disabled={isFull} className={"slot" + (isSelected ? " picked" : "")} onClick={() => setSelectedSlot(s)}>
+
+                const handleSlotClick = () => {
+                  if (multiSelect) {
+                    // Toggle in array
+                    setSelectedSlots(prev => {
+                      const exists = prev.some(sl => sl.sessionId === s.sessionId);
+                      if (exists) {
+                        return prev.filter(sl => sl.sessionId !== s.sessionId);
+                      } else {
+                        return [...prev, s];
+                      }
+                    });
+                  } else {
+                    setSelectedSlot(s);
+                  }
+                };
+
+                return (<button key={s.sessionId} disabled={isFull} className={"slot" + (isSelected ? " picked" : "")} onClick={handleSlotClick}>
                   <div className="stime">{s.time}</div><div className="stype">{cls?.label}</div>
                   <div className={"sspots " + spotClass}>{isSelected ? "Selected ✓" : isFull ? "Full" : classType === "pt" ? "Available" : s.booked + " of " + s.capacity + " booked"}</div>
                 </button>);
@@ -1598,6 +1701,58 @@ function Booking({ addBooking, go, user }) {
           </div>)}
           {!slotsLoaded && <div className="empty-day" style={{ marginTop: 20 }}>Loading availability...</div>}
           {slotsLoaded && !selectedDate && <div className="empty-day" style={{ marginTop: 20 }}>Tap a highlighted date to see available times.</div>}
+
+          {/* Multi-select summary tray */}
+          {multiSelect && selectedSlots.length > 0 && (
+            <div style={{
+              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+              background: "linear-gradient(to top, rgba(12,9,8,.98) 80%, transparent)",
+              padding: "24px 16px 20px",
+            }}>
+              <div style={{ maxWidth: 520, margin: "0 auto" }}>
+                <div style={{
+                  background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 16,
+                  padding: 16, boxShadow: "0 -4px 20px rgba(0,0,0,.3)"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", color: "var(--ember2)", textTransform: "uppercase" }}>
+                      {selectedSlots.length} session{selectedSlots.length > 1 ? "s" : ""} selected
+                    </span>
+                    <button
+                      onClick={() => setSelectedSlots([])}
+                      style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ash)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", maxHeight: 100, overflowY: "auto" }}>
+                    {selectedSlots
+                      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+                      .map((s) => (
+                        <div
+                          key={s.sessionId}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8,
+                            background: "rgba(224,45,36,.1)", border: "1px solid rgba(224,45,36,.3)",
+                            borderRadius: 8, padding: "6px 10px"
+                          }}
+                        >
+                          <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--bone)" }}>
+                            {new Date(s.date + "T00:00:00.000Z").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {s.time}
+                          </span>
+                          <button
+                            onClick={() => setSelectedSlots(prev => prev.filter(sl => sl.sessionId !== s.sessionId))}
+                            style={{ width: 18, height: 18, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: "var(--ash)", cursor: "pointer", padding: 0 }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>)}
 
         {step === 3 && (<>
@@ -1615,28 +1770,59 @@ function Booking({ addBooking, go, user }) {
 
         {step === 4 && (<>
           <SLabel>Review & confirm</SLabel>
-          {selectedSlot ? (
-            <>
-              <div className="summary">
-                <div className="srow"><span className="k">Session</span><span className="v">{cls?.label || "Session"}</span></div>
-                <div className="srow"><span className="k">Date</span><span className="v">{fmtDate(selectedSlot.date)}</span></div>
-                <div className="srow"><span className="k">Time</span><span className="v">{selectedSlot.time}</span></div>
-                <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
-                <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
-                <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
-              </div>
-              <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
-            </>
-          ) : (
-            <div className="empty-day">Please go back and select a time slot.</div>
-          )}
+          {(() => {
+            const slotsToReview = multiSelect ? selectedSlots : (selectedSlot ? [selectedSlot] : []);
+            if (slotsToReview.length === 0) {
+              return <div className="empty-day">Please go back and select a time slot.</div>;
+            }
+            const totalPrice = slotsToReview.reduce((sum, s) => sum + (cls?.price ?? 0), 0);
+            const isMulti = slotsToReview.length > 1;
+            return (
+              <>
+                {isMulti && (
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--ember2)", marginBottom: 16, textAlign: "center" }}>
+                    Booking {slotsToReview.length} sessions
+                  </div>
+                )}
+                {slotsToReview
+                  .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+                  .map((slot, i) => (
+                    <div key={slot.sessionId} className="summary" style={{ marginBottom: isMulti ? 12 : 0 }}>
+                      {isMulti && (
+                        <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".08em", color: "var(--ash)", marginBottom: 8, textTransform: "uppercase" }}>
+                          Session {i + 1}
+                        </div>
+                      )}
+                      <div className="srow"><span className="k">Session</span><span className="v">{cls?.label || "Session"}</span></div>
+                      <div className="srow"><span className="k">Date</span><span className="v">{fmtDate(slot.date)}</span></div>
+                      <div className="srow"><span className="k">Time</span><span className="v">{slot.time}</span></div>
+                      {!isMulti && (
+                        <>
+                          <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
+                          <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
+                          <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                {isMulti && (
+                  <div className="summary" style={{ marginTop: 4 }}>
+                    <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
+                    <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
+                    <div className="srow total"><span className="k">Total due at studio</span><span className="v">${totalPrice}</span></div>
+                  </div>
+                )}
+                <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+              </>
+            );
+          })()}
           {error && <p style={{ color: "var(--flame)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>{error}</p>}
         </>)}
       </div>
-      <div className="nav-btns">
+      <div className="nav-btns" style={{ paddingBottom: multiSelect && selectedSlots.length > 0 && step === 2 ? 140 : 0 }}>
         <button className="btn btn-ghost" onClick={() => step === 1 ? go("home") : setStep(step - 1)}>{step === 1 ? "Cancel" : "Back"}</button>
         {step < 4 ? <button className="btn btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}>Continue <Arrow /></button>
-          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking..." : <>Confirm Booking <Check /></>}</button>}
+          : <button className="btn btn-primary" disabled={saving} onClick={confirm}>{saving ? "Booking..." : <>Confirm {multiSelect && selectedSlots.length > 1 ? `${selectedSlots.length} Bookings` : "Booking"} <Check /></>}</button>}
       </div>
     </div></div>
   );
