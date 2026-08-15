@@ -225,7 +225,7 @@ export default function SchedulePage() {
                           >
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1917" }}>{slot.time}</div>
                             <div style={{ fontSize: 11, color: "#78716c" }}>
-                              {slot.classType === "PT" ? "PT" : "Group"} · {slotBookings.length}/{slot.capacity}
+                              {slot.classType === "pt" ? "1:1" : "Group"} · {slotBookings.length}/{slot.capacity}
                             </div>
                           </button>
                         );
@@ -309,7 +309,7 @@ export default function SchedulePage() {
               </button>
             </div>
             <div style={{ fontSize: 14, color: "#78716c", marginBottom: 16 }}>
-              {selectedSlot.classType === "PT" ? "Personal Training" : "Group Class"}
+              {selectedSlot.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
             </div>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>
               Bookings ({getBookingsForSlot(selectedSlot.sessionId).length}/{selectedSlot.capacity})

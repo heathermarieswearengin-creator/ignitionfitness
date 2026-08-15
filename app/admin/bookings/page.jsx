@@ -154,8 +154,8 @@ export default function BookingsPage() {
                     <td>{formatDate(b.date)}</td>
                     <td>{b.time}</td>
                     <td>
-                      <span className={`adm-badge ${b.classType === "PT" ? "adm-badge-gray" : "adm-badge-green"}`}>
-                        {b.classType === "PT" ? "PT" : "Group"}
+                      <span className={`adm-badge ${b.classType === "pt" ? "adm-badge-gray" : "adm-badge-green"}`}>
+                        {b.classType === "pt" ? "1:1" : "Group"}
                       </span>
                     </td>
                     <td>

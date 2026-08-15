@@ -109,7 +109,7 @@ export default function OverviewPage() {
                         <div>
                           <div style={{ fontWeight: 600, color: "#1c1917" }}>{s.time}</div>
                           <div style={{ fontSize: 13, color: "#78716c" }}>
-                            {s.classType === "PT" ? "Personal Training" : "Group Class"}
+                            {s.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
                           </div>
                         </div>
                         <div style={{
@@ -150,7 +150,7 @@ export default function OverviewPage() {
                     }}>
                       <div>
                         <div style={{ fontWeight: 600, color: "#1c1917" }}>{b.name}</div>
-                        <div style={{ fontSize: 13, color: "#78716c" }}>{b.time} - {b.classType === "PT" ? "PT" : "Group"}</div>
+                        <div style={{ fontSize: 13, color: "#78716c" }}>{b.time} - {b.classType === "pt" ? "1:1" : "Group"}</div>
                       </div>
                       <span className={`adm-badge ${b.status === "confirmed" ? "adm-badge-green" : b.status === "pending" ? "adm-badge-yellow" : "adm-badge-gray"}`}>
                         {b.status}
