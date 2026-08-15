@@ -29,6 +29,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await bcrypt.compare(password, hash);
         if (!user || !ok) return null;
 
+        // Block archived users from logging in
+        if (user.archived) return null;
+
         return { id: user.id, email: user.email, name: user.name, role: user.role };
       },
     }),

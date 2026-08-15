@@ -45,6 +45,7 @@ model User {
   phone        String?
   role         Role            @default(MEMBER)
   createdAt    DateTime        @default(now())
+  archived     Boolean         @default(false)
   bookings     Booking[]
   packages     MemberPackage[]
   adminLogs    PackageLog[]    @relation("AdminLogs")

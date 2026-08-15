@@ -1,7 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/tx";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { toClientMemberPackage } from "@/lib/packages";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +8,19 @@ export async function GET(request) {
   try {
     await requireAdmin();
     const prisma = getPrisma();
-    const q = new URL(request.url).searchParams.get("q")?.trim();
+    const url = new URL(request.url);
+    const q = url.searchParams.get("q")?.trim();
+    const includeArchived = url.searchParams.get("includeArchived") === "true";
 
     const members = await prisma.user.findMany({
       where: {
         role: "MEMBER",
+        ...(includeArchived ? {} : { archived: false }),
         ...(q
           ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] }
           : {}),
       },
       include: {
-        packages: { include: { source: true }, orderBy: { createdAt: "desc" } },
         _count: { select: { bookings: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -31,9 +32,9 @@ export async function GET(request) {
         name: m.name,
         email: m.email,
         phone: m.phone,
+        archived: m.archived,
         createdAt: new Date(m.createdAt).getTime(),
         bookingCount: m._count.bookings,
-        packages: m.packages.map(toClientMemberPackage),
       }))
     );
   } catch (err) {
