@@ -527,13 +527,13 @@ function Booking({ addBooking, go, user }) {
             <div style={{ fontFamily: "var(--body)", fontSize: 18, fontWeight: 600, color: "var(--bone)", minWidth: 160, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
             <button onClick={nextMonth} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--ash)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>&rarr;</button>
           </div>
-          <div style={{ padding: 0 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 12 }}>
+          <div style={{ padding: 0, maxWidth: 420, margin: "0 auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 8 }}>
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                <div key={d} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".05em", color: "var(--ash)", textTransform: "uppercase", padding: "8px 0" }}>{d}</div>
+                <div key={d} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".05em", color: "var(--ash)", textTransform: "uppercase", padding: "4px 0" }}>{d}</div>
               ))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
               {calendarDays.map(({ date, outside }, i) => {
                 const iso = date.toISOString().slice(0, 10);
                 const isPast = iso < todayIso;
@@ -543,14 +543,14 @@ function Booking({ addBooking, go, user }) {
 
                 const baseStyle = {
                   width: "100%",
-                  aspectRatio: "1",
+                  height: 44,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: "var(--body)",
                   fontWeight: 500,
-                  fontSize: 16,
-                  borderRadius: 8,
+                  fontSize: 14,
+                  borderRadius: 6,
                   cursor: hasAvail ? "pointer" : "not-allowed",
                   padding: 0,
                   transition: ".15s",
