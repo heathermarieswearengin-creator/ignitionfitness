@@ -718,6 +718,8 @@ function Home({ go, addLead }) {
 }
 
 /* ---------- booking ---------- */
+const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".14em", color: "var(--ember2)", textTransform: "uppercase", marginBottom: 18, fontWeight: 600 }}>{children}</div>);
+
 function Booking({ addBooking, go, user }) {
   const [step, setStep] = useState(1);
   const [classType, setClassType] = useState(null);
@@ -785,10 +787,14 @@ function Booking({ addBooking, go, user }) {
       reloadSlots();
     } catch (e) {
       console.error("Booking error:", e);
-      // Ensure error is always a string for safe rendering
-      const errorMsg = typeof e === "string" ? e : (e?.message || "Something went wrong. Please try again.");
-      setError(errorMsg);
-      reloadSlots();
+      // Ensure error is always a primitive string for safe rendering
+      let errorMsg = "Something went wrong. Please try again.";
+      try {
+        if (typeof e === "string") errorMsg = e;
+        else if (e && typeof e.message === "string") errorMsg = e.message;
+      } catch { /* keep default */ }
+      setError(String(errorMsg));
+      // Don't reload slots on error - it can cause render issues
     } finally {
       setSaving(false);
     }
@@ -1034,7 +1040,6 @@ function Booking({ addBooking, go, user }) {
     </div></div>
   );
 }
-const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".14em", color: "var(--ember2)", textTransform: "uppercase", marginBottom: 18, fontWeight: 600 }}>{children}</div>);
 // Parsed and read in UTC so a "YYYY-MM-DD" always renders as that same day,
 // regardless of the viewer's own timezone.
 function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.getUTCDay()]}, ${MON[x.getUTCMonth()]} ${x.getUTCDate()}`; }

@@ -31,8 +31,10 @@ function LoginForm() {
       setBusy(false);
       return;
     }
-    // Fetch user role from server (more reliable than client getSession)
-    const me = await fetch("/api/me").then(r => r.json()).catch(() => ({}));
+    // Small delay to ensure session cookie is fully established
+    await new Promise(r => setTimeout(r, 100));
+    // Fetch user role from server with cache bypass
+    const me = await fetch("/api/me", { cache: "no-store" }).then(r => r.json()).catch(() => ({}));
     // Admin users always go to /admin
     if (me?.user?.role === "ADMIN") {
       window.location.href = "/admin";

@@ -43,11 +43,11 @@
       "Bash(echo *)",
       "Bash(mkdir *)",
       "Bash(curl -s http://localhost*)",
-      "Bash(curl -s -X * http://localhost*)"
+      "Bash(curl -s -X * http://localhost*)",
+      "Bash(git push*)"
     ],
     "deny": [
-      "Bash(rm -rf /*)",
-      "Bash(git push*)"
+      "Bash(rm -rf /*)"
     ]
   }
 }
