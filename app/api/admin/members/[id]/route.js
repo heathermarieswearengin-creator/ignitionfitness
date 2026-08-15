@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { toClientBooking } from "@/lib/shape";
+import { studioNow } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export async function GET(_request, { params }) {
     await requireAdmin();
     const prisma = getPrisma();
     const { id } = await params;
+    const today = studioNow().isoDay;
 
     const member = await prisma.user.findUnique({
       where: { id },
@@ -34,7 +36,7 @@ export async function GET(_request, { params }) {
       archived: member.archived,
       createdAt: new Date(member.createdAt).getTime(),
       bookingCount: member._count.bookings,
-      recentBookings: member.bookings.map(toClientBooking),
+      recentBookings: member.bookings.map(b => toClientBooking(b, today)),
     });
   } catch (err) {
     return jsonError(err);
