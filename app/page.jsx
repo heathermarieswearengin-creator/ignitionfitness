@@ -440,40 +440,86 @@ function Booking({ addBooking, go, user }) {
 
   const confirm = async () => {
     if (saving || !selectedSlot) return;
-    setSaving(true); setError(null);
+    setSaving(true);
+    setError(null);
     try {
       const created = await addBooking({
         items: [{ sessionId: selectedSlot.sessionId }],
-        contact: user ? { phone: form.phone.trim() } : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+        contact: user
+          ? { phone: form.phone.trim() }
+          : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
       });
-      setDone(Array.isArray(created) ? created[0] : created);
-      setStep(5); reloadSlots();
-    } catch (e) { setError(e.message || "Something went wrong."); reloadSlots(); }
-    finally { setSaving(false); }
+
+      // Ensure we have valid booking data before showing confirmation
+      const booking = Array.isArray(created) ? created[0] : created;
+      if (!booking || !booking.ref) {
+        throw new Error("Booking was created but confirmation data is missing. Please check your bookings.");
+      }
+
+      setDone(booking);
+      setStep(5);
+      reloadSlots();
+    } catch (e) {
+      console.error("Booking error:", e);
+      setError(e.message || "Something went wrong. Please try again.");
+      reloadSlots();
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (done) {
+  if (done && done.ref) {
     const price = CLASS_MAP[done.classType]?.price ?? 0;
+    const firstName = (done.name || "").split(" ")[0] || "there";
+    const sessionLabel = CLASS_MAP[done.classType]?.label || (done.classType === "pt" ? "Personal Training" : "Group Class");
+
+    // Build calendar URL safely - only if we have the required fields
+    const canShowCalendar = done.sessionType && done.startTime && done.date;
+    const calUrl = canShowCalendar ? googleCalendarUrl(done) : null;
+
     return (
       <div className="page"><div className="wrap"><div className="confirm">
         <div className="seal"><Check s={42} /></div>
-        <h1>You're Booked</h1>
-        <p style={{ color: "var(--ash)", fontSize: 16 }}>See you at the bell, {done.name.split(" ")[0]}. A confirmation is on its way to {done.email}.</p>
+        <h1>You're Booked!</h1>
+        <p style={{ color: "var(--ash)", fontSize: 16, maxWidth: 400, margin: "0 auto" }}>
+          See you at the bell, {firstName}. A confirmation email is on its way to {done.email || "your inbox"}.
+        </p>
         <div className="ref">CONFIRMATION · {done.ref}</div>
+
         <div className="summary" style={{ marginTop: 24, textAlign: "left" }}>
-          <div className="srow cal-row">
-            <span className="k">{CLASS_MAP[done.classType]?.label ?? done.classType}
-              <span className="cal-links">
-                <a href={googleCalendarUrl(done)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
-                <a href={"/api/bookings/" + done.id + "/ics"}>Download .ics</a>
-              </span>
-            </span>
-            <span className="v">{fmtDate(done.date)} · {done.time}</span>
+          <div className="srow">
+            <span className="k">Session</span>
+            <span className="v">{sessionLabel}</span>
           </div>
-          <div className="srow"><span className="k">Location</span><span className="v">{STUDIO.addressLine}</span></div>
-          <div className="srow total"><span className="k">Due at studio</span><span className="v">${price}</span></div>
+          <div className="srow">
+            <span className="k">Date & Time</span>
+            <span className="v">{done.date ? fmtDate(done.date) : "—"} · {done.time || "—"}</span>
+          </div>
+          <div className="srow">
+            <span className="k">Location</span>
+            <span className="v">{STUDIO.addressLine}</span>
+          </div>
+          <div className="srow total">
+            <span className="k">Due at studio</span>
+            <span className="v">${price}</span>
+          </div>
         </div>
-        <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 16 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+
+        {canShowCalendar && (
+          <div className="cal-links" style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
+            <a href={calUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ fontSize: 13 }}>
+              Add to Google Calendar
+            </a>
+            <a href={`/api/bookings/${done.id}/ics`} className="btn btn-ghost" style={{ fontSize: 13 }}>
+              Download .ics
+            </a>
+          </div>
+        )}
+
+        <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 20 }}>
+          Payment is handled in person. Cancel free up to 12 hours before.
+        </p>
+
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
           <button className="btn btn-ghost" onClick={() => go("home")}>Back Home</button>
           {user && <button className="btn btn-ghost" onClick={() => go("mine")}>My Sessions</button>}
