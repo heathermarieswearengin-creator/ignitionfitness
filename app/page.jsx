@@ -522,10 +522,10 @@ function Booking({ addBooking, go, user }) {
         </>)}
 
         {step === 2 && (<>
-          <div className="cal-header">
-            <button className="cal-arrow" onClick={prevMonth}>&lt;</button>
-            <div className="cal-month-title">{monthNames[viewMonth.month]} {viewMonth.year}</div>
-            <button className="cal-arrow" onClick={nextMonth}>&gt;</button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 24 }}>
+            <button onClick={prevMonth} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--ash)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>&larr;</button>
+            <div style={{ fontFamily: "var(--body)", fontSize: 18, fontWeight: 600, color: "var(--bone)", minWidth: 160, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
+            <button onClick={nextMonth} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--ash)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>&rarr;</button>
           </div>
           <div className="booking-cal">
             <div className="booking-cal-head" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
