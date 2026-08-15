@@ -118,15 +118,70 @@ export default function App() {
 
   const go = (v) => { setView(v); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
+  // Logged-in users get an app-like experience (no website chrome)
+  if (user) {
+    return (
+      <div className="ign">
+        <Theme />
+        <AppHeader user={user} isAdmin={isAdmin} onSignOut={() => signOut({ callbackUrl: "/" })} />
+        {view === "book" ? (
+          <BookingErrorBoundary key="booking-boundary" go={go}>
+            <Booking addBooking={addBooking} go={go} user={user} />
+          </BookingErrorBoundary>
+        ) : (
+          <MySessions go={go} user={user} status={status} />
+        )}
+      </div>
+    );
+  }
+
+  // Non-logged-in users see the full marketing website
   return (
     <div className="ign">
       <Theme />
       <Nav view={view} go={go} user={user} isAdmin={isAdmin} />
       {view === "home" && <Home go={go} addLead={addLead} />}
       {view === "book" && <BookingErrorBoundary key="booking-boundary" go={go}><Booking addBooking={addBooking} go={go} user={user} /></BookingErrorBoundary>}
-      {view === "mine" && <MySessions go={go} user={user} status={status} />}
       <Footer go={go} />
     </div>
+  );
+}
+
+/* ---------- app header (logged-in users) ---------- */
+function AppHeader({ user, isAdmin, onSignOut }) {
+  return (
+    <header style={{
+      position: "sticky", top: 0, zIndex: 50,
+      background: "rgba(12,9,8,.95)", backdropFilter: "blur(14px)",
+      borderBottom: "1px solid #3a261d",
+      padding: "0 20px"
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: 64, maxWidth: 720, margin: "0 auto"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Logo h={38} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {isAdmin && (
+            <a href="/admin" style={{
+              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600,
+              letterSpacing: ".08em", textTransform: "uppercase",
+              color: "#f0ab33", textDecoration: "none",
+              padding: "8px 12px", borderRadius: 6,
+              background: "rgba(240,171,51,.1)"
+            }}>Admin</a>
+          )}
+          <button onClick={onSignOut} style={{
+            fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600,
+            letterSpacing: ".08em", textTransform: "uppercase",
+            color: "#b0a193", background: "transparent", border: "none",
+            padding: "8px 12px", borderRadius: 6, cursor: "pointer"
+          }}>Sign Out</button>
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -569,19 +624,39 @@ function MySessions({ go, user, status }) {
       </div>
 
       {/* Upcoming sessions */}
-      <div id="upcoming" className="my-sessions-panel">
-        <div className="ms-panel-header">
-          <h2>Upcoming Sessions</h2>
-          {data.upcoming.length > 0 && <span className="ms-panel-count">{data.upcoming.length}</span>}
+      <div id="upcoming" style={{
+        background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20, marginBottom: 24
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 22px", borderBottom: "1px solid #281a15"
+        }}>
+          <h2 style={{ fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase", letterSpacing: ".02em", color: "#f3ece1", margin: 0 }}>
+            Upcoming Sessions
+          </h2>
+          {data.upcoming.length > 0 && (
+            <span style={{
+              fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+              background: "rgba(224,45,36,.15)", color: "#f0ab33",
+              padding: "5px 12px", borderRadius: 20
+            }}>{data.upcoming.length}</span>
+          )}
         </div>
-        <div className="ms-panel-body">
-          {loading && <div className="ms-loading">Loading…</div>}
+        <div style={{ padding: 20 }}>
+          {loading && <div style={{ textAlign: "center", color: "#b0a193", padding: 32 }}>Loading…</div>}
           {!loading && data.upcoming.length === 0 && (
-            <div className="ms-empty-state">
-              <div className="ms-empty-icon"><Bell s={48} /></div>
-              <h3>No upcoming sessions</h3>
-              <p>You don't have any sessions booked yet.<br />Ready to ignite your fitness journey?</p>
-              <button className="btn btn-primary" onClick={() => go("book")}>Book Your First Session</button>
+            <div style={{ textAlign: "center", padding: "48px 20px 56px" }}>
+              <div style={{
+                width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
+                display: "grid", placeItems: "center",
+                background: "linear-gradient(150deg, #1d1411, #281a15)",
+                border: "1.5px solid #3a261d", color: "#f0ab33"
+              }}><Bell s={48} /></div>
+              <h3 style={{ fontFamily: "var(--display)", fontSize: 28, textTransform: "uppercase", marginBottom: 12, color: "#f3ece1" }}>No upcoming sessions</h3>
+              <p style={{ color: "#b0a193", fontSize: 15, lineHeight: 1.6, marginBottom: 28, maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
+                You don't have any sessions booked yet.<br />Ready to ignite your fitness journey?
+              </p>
+              <button className="btn btn-primary" onClick={() => go("book")} style={{ padding: "14px 32px", fontSize: 13 }}>Book Your First Session</button>
             </div>
           )}
           {!loading && data.upcoming.length > 0 && (
@@ -629,25 +704,53 @@ function MySessions({ go, user, status }) {
 
       {/* Past sessions */}
       {data.past.length > 0 && (
-        <div className="my-sessions-panel past-panel">
-          <div className="ms-panel-header">
-            <h2>Past &amp; Cancelled</h2>
-            <span className="ms-panel-count">{data.past.length}</span>
+        <div style={{
+          background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20,
+          opacity: 0.85
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "18px 22px", borderBottom: "1px solid #281a15"
+          }}>
+            <h2 style={{ fontFamily: "var(--display)", fontSize: 20, textTransform: "uppercase", letterSpacing: ".02em", color: "#f3ece1", margin: 0 }}>
+              Past &amp; Cancelled
+            </h2>
+            <span style={{
+              fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
+              background: "rgba(176,161,147,.1)", color: "#78716c",
+              padding: "5px 12px", borderRadius: 20
+            }}>{data.past.length}</span>
           </div>
-          <div className="ms-panel-body">
-            <div className="ms-sessions-list">
+          <div style={{ padding: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {data.past.map((b) => (
-                <div key={b.id} className="sess-row past">
-                  <div className="sess-row-left">
-                    <div className="sess-row-icon muted">
-                      {b.classType === "GROUP" ? <Flame s={20} /> : <Clock s={20} />}
+                <div key={b.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
+                  background: "#1d1411", border: "1px solid #281a15", borderRadius: 12,
+                  padding: "14px 16px", opacity: 0.7
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10, display: "grid", placeItems: "center",
+                      background: "#281a15", color: "#78716c"
+                    }}>
+                      {b.classType === "GROUP" || b.classType === "group" ? <Bell s={18} /> : <User s={18} />}
                     </div>
-                    <div className="sess-row-info">
-                      <div className="sess-row-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-                      <div className="sess-row-when">{fmtDate(b.date)} · {b.time}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#b0a193", marginBottom: 2 }}>
+                        {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
+                      </div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c" }}>
+                        {fmtDate(b.date)} · {b.time}
+                      </div>
                     </div>
                   </div>
-                  <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+                  <span style={{
+                    fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
+                    textTransform: "uppercase", padding: "5px 10px", borderRadius: 20,
+                    background: b.status === "cancelled" ? "rgba(239,68,68,.1)" : "rgba(176,161,147,.1)",
+                    color: b.status === "cancelled" ? "#ef4444" : "#78716c"
+                  }}>{b.status.replace("-", " ")}</span>
                 </div>
               ))}
             </div>
