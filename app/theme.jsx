@@ -604,6 +604,81 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .booking-cal-day{font-size:13px;border-radius:5px}
   .booking-cal-dow{font-size:8px;padding:4px 0}
 }
+
+/* My Sessions - Action Cards */
+.action-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:440px;margin:0 auto}
+.action-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:var(--f900);border:1.5px solid var(--line);border-radius:14px;padding:24px 18px;
+  color:var(--bone);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;text-decoration:none;cursor:pointer;transition:.2s}
+.action-card:hover{border-color:var(--ember);transform:translateY(-2px)}
+.action-card.primary{background:linear-gradient(150deg,var(--flame),var(--ember));border-color:transparent;
+  box-shadow:0 8px 26px rgba(224,45,36,.32)}
+.action-card.primary:hover{box-shadow:0 12px 34px rgba(224,45,36,.5);transform:translateY(-3px)}
+
+/* My Sessions - Session Cards */
+.sess-card{background:var(--f900);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;
+  margin-bottom:12px}
+.sess-card:last-child{margin-bottom:0}
+.sess-info{margin-bottom:14px}
+.sess-type{font-size:16px;font-weight:700;margin-bottom:4px}
+.sess-when{font-family:var(--mono);font-size:12px;color:var(--ash);margin-bottom:8px}
+.sess-actions .cal-links{margin-bottom:10px}
+
+/* My Sessions - Past sessions */
+.mysess.past{opacity:.7}
+.mysess.past .ms-d{font-weight:600}
+
+/* Empty state */
+.empty-state{padding:50px 24px;text-align:center}
+.empty-icon{width:80px;height:80px;border-radius:20px;margin:0 auto 20px;display:grid;place-items:center;
+  background:var(--f800);border:1px solid var(--line);color:var(--ember2)}
+.empty-state h3{font-family:var(--display);font-size:24px;text-transform:uppercase;margin-bottom:10px}
+.empty-state p{color:var(--ash);font-size:14px;margin-bottom:24px;max-width:280px;margin-left:auto;margin-right:auto}
+
+/* Cancel button variant */
+.btn-cancel{background:rgba(150,22,16,.2);color:var(--flame);border:1px solid rgba(224,45,36,.3)}
+.btn-cancel:hover{background:rgba(150,22,16,.35);border-color:var(--flame)}
+
+/* Modal overlay & dialog */
+.modal-overlay{position:fixed;inset:0;background:rgba(6,4,3,.85);z-index:100;display:flex;
+  align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.modal{background:var(--f900);border:1.5px solid var(--line);border-radius:18px;padding:28px 26px;
+  width:100%;max-width:380px}
+.modal-lg{max-width:480px}
+.modal h2{font-family:var(--display);font-size:26px;text-transform:uppercase;margin-bottom:16px;text-align:center}
+.modal-session{background:var(--f800);border:1px solid var(--line);border-radius:12px;padding:16px;
+  margin-bottom:16px;text-align:center}
+.modal-error{padding:12px;background:rgba(150,22,16,.2);border:1px solid rgba(224,45,36,.3);
+  border-radius:10px;color:var(--flame);font-size:13px;text-align:center}
+
+/* Reschedule calendar nav */
+.cal-nav{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:transparent;
+  color:var(--ash);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.cal-nav:hover{border-color:var(--ember);color:var(--bone)}
+
+/* Reschedule comparison */
+.reschedule-compare{display:flex;align-items:center;justify-content:center;gap:20px;padding:24px 0}
+.resc-from,.resc-to{text-align:center}
+.resc-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ash);margin-bottom:8px}
+.resc-from .resc-label{color:#6b5d52}
+.resc-to .resc-label{color:var(--ember2)}
+.resc-date{font-family:var(--display);font-size:18px;margin-bottom:2px}
+.resc-from .resc-date{color:#6b5d52;text-decoration:line-through}
+.resc-time{font-family:var(--mono);font-size:14px}
+.resc-from .resc-time{color:#6b5d52}
+.resc-to .resc-time{color:var(--ember2)}
+.resc-arrow{color:var(--ember2)}
+
+@media(max-width:500px){
+  .action-cards{grid-template-columns:1fr;max-width:300px}
+  .action-card{padding:20px 16px}
+  .sess-card{padding:16px}
+  .modal{padding:24px 20px;max-width:calc(100% - 32px)}
+  .reschedule-compare{gap:14px}
+  .resc-date{font-size:16px}
+}
 `;
 
 export function Theme() {

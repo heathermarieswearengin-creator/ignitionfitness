@@ -5,9 +5,6 @@ import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
 import { googleCalendarUrl } from "@/lib/ics";
 import { Theme } from "@/app/theme";
-import { AdminCalendar } from "@/app/admin-calendar";
-import { AdminPackages } from "@/app/admin-packages";
-import { AdminLeads } from "@/app/admin-leads";
 
 /* ============================================================
    IGNITION FITNESS: landing + booking + admin (single app)
@@ -70,25 +67,6 @@ export default function App() {
   const isAdmin = user?.role === "ADMIN";
 
   const [view, setView] = useState("home");
-  const [bookings, setBookings] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-
-  // Bookings and leads are admin-only reads now, so only fetch them once we
-  // know the signed-in user is an admin — otherwise they'd just 401.
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!isAdmin) { setBookings([]); setLeads([]); setLoaded(true); return; }
-    (async () => {
-      const [b, l] = await Promise.all([
-        fetch("/api/bookings").then((r) => (r.ok ? r.json() : [])).catch(() => []),
-        fetch("/api/leads").then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      ]);
-      setBookings(b);
-      setLeads(l);
-      setLoaded(true);
-    })();
-  }, [isAdmin, status]);
 
   // The server owns the id, ref and capacity check, so the created booking is
   // returned to the caller rather than invented in the browser. Accepts either
@@ -101,48 +79,18 @@ export default function App() {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(data?.error || "Could not complete that booking.");
-    const made = Array.isArray(data) ? data : [data];
-    if (isAdmin) setBookings((prev) => [...prev, ...made]);
     return data;
   };
 
-  const updateBooking = async (id, patch) => {
-    const before = bookings;
-    setBookings((bs) => bs.map((b) => (b.id === id ? { ...b, ...patch } : b)));
-    try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (!res.ok) throw new Error("patch failed");
-      const saved = await res.json();
-      setBookings((bs) => bs.map((b) => (b.id === id ? saved : b)));
-    } catch {
-      setBookings(before); // roll the optimistic update back
-    }
-  };
-
-  const reloadLeads = async () => {
-    try {
-      const res = await fetch("/api/leads");
-      if (res.ok) setLeads(await res.json());
-    } catch { /* leave the current list in place */ }
-  };
-
+  // Lead capture is best-effort; never block the UI on it.
   const addLead = async (email, source) => {
     try {
-      const res = await fetch("/api/leads", {
+      await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, source }),
       });
-      if (!res.ok) return;
-      const lead = await res.json();
-      setLeads((prev) => (prev.some((l) => l.id === lead.id) ? prev : [...prev, lead]));
-    } catch {
-      /* lead capture is best-effort; never block the UI on it */
-    }
+    } catch { /* silent fail */ }
   };
 
   const go = (v) => { setView(v); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -154,8 +102,7 @@ export default function App() {
       {view === "home" && <Home go={go} addLead={addLead} />}
       {view === "book" && <Booking addBooking={addBooking} go={go} user={user} />}
       {view === "mine" && <MySessions go={go} user={user} status={status} />}
-      {view === "admin" && <Admin bookings={bookings} updateBooking={updateBooking} leads={leads} reloadLeads={reloadLeads} loaded={loaded} user={user} isAdmin={isAdmin} status={status} />}
-      {view !== "admin" && <Footer go={go} />}
+      <Footer go={go} />
     </div>
   );
 }
@@ -181,7 +128,7 @@ function Nav({ view, go, user, isAdmin }) {
               <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
             )}
             {isAdmin && (
-              <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => navTo("admin")}>ADMIN</button>
+              <a className="nlink" href="/admin">ADMIN</a>
             )}
             {user
               ? <button className="nlink" onClick={() => { signOut({ callbackUrl: "/" }); closeMobile(); }}>SIGN OUT</button>
@@ -205,7 +152,7 @@ function Nav({ view, go, user, isAdmin }) {
           <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
         )}
         {isAdmin && (
-          <button className={"nlink" + (view === "admin" ? " on" : "")} onClick={() => navTo("admin")}>ADMIN</button>
+          <a className="nlink" href="/admin" onClick={closeMobile}>ADMIN</a>
         )}
         {user
           ? <button className="nlink" onClick={() => { signOut({ callbackUrl: "/" }); closeMobile(); }}>SIGN OUT</button>
@@ -221,14 +168,121 @@ function MySessions({ go, user, status }) {
   const [data, setData] = useState({ upcoming: [], past: [] });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Reschedule state
+  const [rescheduleBooking, setRescheduleBooking] = useState(null);
+  const [rescheduleStep, setRescheduleStep] = useState(1); // 1=pick date/time, 2=confirm
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [slots, setSlots] = useState([]);
+  const [slotsLoaded, setSlotsLoaded] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const now = studioNow();
+    const d = new Date(now.isoDay + "T00:00:00.000Z");
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
+  });
+  const [rescheduling, setRescheduling] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState(null);
+  const [rescheduleSuccess, setRescheduleSuccess] = useState(null);
+
+  // Cancel state
+  const [cancelBooking, setCancelBooking] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
+
+  const reload = React.useCallback(() => {
     if (!user) { setLoading(false); return; }
+    setLoading(true);
     fetch("/api/me/bookings")
       .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
       .then(setData)
       .catch(() => setData({ upcoming: [], past: [] }))
       .finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  // Load slots when reschedule modal opens
+  const loadSlots = React.useCallback(async () => {
+    if (!rescheduleBooking) return;
+    setSlotsLoaded(false);
+    const firstDay = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
+    const lastDay = new Date(Date.UTC(viewMonth.year, viewMonth.month + 2, 0));
+    const from = firstDay.toISOString().slice(0, 10);
+    const to = lastDay.toISOString().slice(0, 10);
+    try {
+      const res = await fetch("/api/availability?from=" + from + "&to=" + to);
+      setSlots(res.ok ? await res.json() : []);
+    } catch { setSlots([]); }
+    finally { setSlotsLoaded(true); }
+  }, [rescheduleBooking, viewMonth]);
+
+  useEffect(() => { if (rescheduleBooking) loadSlots(); }, [loadSlots, rescheduleBooking]);
+
+  const openReschedule = (b) => {
+    setRescheduleBooking(b);
+    setRescheduleStep(1);
+    setSelectedSlot(null);
+    setRescheduleError(null);
+    setRescheduleSuccess(null);
+  };
+
+  const closeReschedule = () => {
+    setRescheduleBooking(null);
+    setSelectedSlot(null);
+    setRescheduleStep(1);
+    setRescheduleError(null);
+  };
+
+  const confirmReschedule = async () => {
+    if (!selectedSlot || !rescheduleBooking || rescheduling) return;
+    setRescheduling(true);
+    setRescheduleError(null);
+    try {
+      const res = await fetch(`/api/me/bookings/${rescheduleBooking.id}/reschedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newSessionId: selectedSlot.sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Could not reschedule");
+      setRescheduleSuccess(data);
+      reload();
+    } catch (e) {
+      setRescheduleError(e.message);
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
+  const openCancel = (b) => {
+    setCancelBooking(b);
+    setCancelError(null);
+  };
+
+  const closeCancel = () => {
+    setCancelBooking(null);
+    setCancelError(null);
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelBooking || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/me/bookings/${cancelBooking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Could not cancel");
+      closeCancel();
+      reload();
+    } catch (e) {
+      setCancelError(e.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (status === "loading") return <div className="page"><div className="wrap"><div className="empty">Loading…</div></div></div>;
 
@@ -243,42 +297,248 @@ function MySessions({ go, user, status }) {
     );
   }
 
-  const Row = ({ b, upcoming }) => (
-    <div className="mysess">
-      <div className="ms-when">
-        <div className="ms-d">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
-        <div className="ms-t">{fmtDate(b.date)} · {b.time} · {b.ref}</div>
-        {upcoming && b.status !== "cancelled" && (
-          <span className="cal-links">
-            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
-            <a href={`/api/bookings/${b.id}/ics`}>Download .ics</a>
-          </span>
-        )}
+  const firstName = user.name?.split(" ")[0] || "athlete";
+  const todayIso = studioNow().isoDay;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  // Calendar helpers for reschedule modal
+  const calendarDays = useMemo(() => {
+    const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
+    const lastOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month + 1, 0));
+    const startPad = firstOfMonth.getUTCDay();
+    const totalDays = lastOfMonth.getUTCDate();
+    const days = [];
+    for (let i = 0; i < startPad; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, 1 - (startPad - i))), outside: true });
+    for (let i = 1; i <= totalDays; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, i)), outside: false });
+    while (days.length < 42) { const last = days[days.length - 1].date; days.push({ date: new Date(last.getTime() + 86400000), outside: true }); }
+    return days;
+  }, [viewMonth]);
+
+  const classType = rescheduleBooking?.classType;
+  const slotsForDate = (d) => slots.filter((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
+  const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
+  const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
+  const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const SessionCard = ({ b }) => (
+    <div className="sess-card">
+      <div className="sess-info">
+        <div className="sess-type">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+        <div className="sess-when">{fmtDate(b.date)} · {b.time}</div>
+        <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
       </div>
-      <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+      <div className="sess-actions">
+        <div className="cal-links" style={{ marginBottom: 10 }}>
+          <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer">Google Calendar</a>
+          <a href={`/api/bookings/${b.id}/ics`}>.ics</a>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "10px 12px" }} onClick={() => openReschedule(b)}>Reschedule</button>
+          <button className="btn btn-cancel" style={{ flex: 1, fontSize: 13, padding: "10px 12px" }} onClick={() => openCancel(b)}>Cancel</button>
+        </div>
+      </div>
     </div>
   );
 
   return (
     <div className="page"><div className="wrap">
-      <div className="page-head">
-        <h1>My Sessions</h1>
-        <p>Everything you have booked, {user.name?.split(" ")[0] ?? "athlete"}.</p>
+      {/* Greeting */}
+      <div className="page-head" style={{ textAlign: "center", marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28 }}>Welcome back, {firstName}</h1>
       </div>
 
-      <div className="panel" style={{ marginBottom: 18 }}>
-        <div className="panel-h"><h3>Upcoming</h3><span className="cnt">{data.upcoming.length}</span></div>
+      {/* Action cards */}
+      <div className="action-cards">
+        <button className="action-card primary" onClick={() => go("book")}>
+          <Flame s={28} />
+          <span>Book a Session</span>
+        </button>
+        <a className="action-card" href="#upcoming">
+          <Clock s={28} />
+          <span>View Upcoming</span>
+        </a>
+      </div>
+
+      {/* Upcoming sessions */}
+      <div id="upcoming" className="panel" style={{ marginTop: 32, marginBottom: 18 }}>
+        <div className="panel-h"><h3>Upcoming Sessions</h3><span className="cnt">{data.upcoming.length}</span></div>
         {loading && <div className="empty">Loading…</div>}
         {!loading && data.upcoming.length === 0 && (
-          <div className="empty">Nothing booked yet. <button className="linkish" onClick={() => go("book")}>Book a session</button></div>
+          <div className="empty-state">
+            <div className="empty-icon"><Bell s={40} /></div>
+            <h3>No upcoming sessions</h3>
+            <p>You don't have any sessions booked yet. Ready to get started?</p>
+            <button className="btn btn-primary" onClick={() => go("book")}>Book Your First Session</button>
+          </div>
         )}
-        {data.upcoming.map((b) => <Row key={b.id} b={b} upcoming />)}
+        {data.upcoming.map((b) => <SessionCard key={b.id} b={b} />)}
       </div>
 
+      {/* Past sessions */}
       {data.past.length > 0 && (
         <div className="panel">
           <div className="panel-h"><h3>Past &amp; Cancelled</h3><span className="cnt">{data.past.length}</span></div>
-          {data.past.map((b) => <Row key={b.id} b={b} />)}
+          {data.past.map((b) => (
+            <div key={b.id} className="mysess past">
+              <div className="ms-when">
+                <div className="ms-d">{CLASS_MAP[b.classType]?.label ?? b.classType}</div>
+                <div className="ms-t">{fmtDate(b.date)} · {b.time}</div>
+              </div>
+              <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {cancelBooking && (
+        <div className="modal-overlay" onClick={closeCancel}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>Cancel Session?</h2>
+            <div className="modal-session">
+              <div style={{ fontWeight: 600 }}>{CLASS_MAP[cancelBooking.classType]?.label}</div>
+              <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(cancelBooking.date)} · {cancelBooking.time}</div>
+            </div>
+            <p style={{ color: "var(--ash)", fontSize: 14, marginBottom: 20 }}>
+              This can't be undone. The slot will be released for others to book.
+            </p>
+            {cancelError && <div className="modal-error">{cancelError}</div>}
+            <div style={{ display: "flex", gap: 12 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeCancel} disabled={cancelling}>Keep Session</button>
+              <button className="btn btn-cancel" style={{ flex: 1 }} onClick={confirmCancel} disabled={cancelling}>
+                {cancelling ? "Cancelling…" : "Yes, Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule modal */}
+      {rescheduleBooking && !rescheduleSuccess && (
+        <div className="modal-overlay" onClick={closeReschedule}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            {rescheduleStep === 1 && (
+              <>
+                <h2>Reschedule Session</h2>
+                <div className="modal-session" style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: "var(--ash)", textTransform: "uppercase", letterSpacing: ".08em" }}>Current</div>
+                  <div style={{ fontWeight: 600 }}>{CLASS_MAP[rescheduleBooking.classType]?.label}</div>
+                  <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(rescheduleBooking.date)} · {rescheduleBooking.time}</div>
+                </div>
+                <div style={{ fontSize: 14, color: "var(--bone)", marginBottom: 16 }}>Pick a new date and time:</div>
+
+                {/* Month nav */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 16 }}>
+                  <button onClick={prevMonth} className="cal-nav">&larr;</button>
+                  <div style={{ fontFamily: "var(--body)", fontSize: 16, fontWeight: 600, color: "var(--bone)", minWidth: 140, textAlign: "center" }}>{monthNames[viewMonth.month]} {viewMonth.year}</div>
+                  <button onClick={nextMonth} className="cal-nav">&rarr;</button>
+                </div>
+
+                {/* Calendar grid */}
+                <div style={{ maxWidth: 350, margin: "0 auto" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                      <div key={i} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 10, color: "var(--ash)", padding: "4px 0" }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {calendarDays.map(({ date, outside }, i) => {
+                      const isoD = date.toISOString().slice(0, 10);
+                      const isPast = isoD < todayIso;
+                      const hasAvail = !isPast && !outside && dayHasSlots(isoD);
+                      const isSelected = selectedDate === isoD;
+                      return (
+                        <button key={i} onClick={() => hasAvail && setSelectedDate(isoD)} disabled={!hasAvail} style={{
+                          width: "100%", height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+                          fontFamily: "var(--body)", fontSize: 14, fontWeight: isSelected ? 700 : 500,
+                          background: isSelected ? "var(--ember)" : hasAvail ? "var(--card)" : "transparent",
+                          color: isSelected ? "#fff" : outside || isPast ? "var(--line)" : hasAvail ? "var(--bone)" : "var(--ash)",
+                          border: hasAvail && !isSelected ? "1px solid var(--line)" : "1px solid transparent",
+                          borderRadius: 8, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1,
+                        }}>{date.getUTCDate()}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Time slots */}
+                {selectedDate && (
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ fontSize: 13, color: "var(--ash)", marginBottom: 10 }}>Available times for {fmtDate(selectedDate)}:</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {slotsForDate(selectedDate).map((s) => (
+                        <button key={s.sessionId} onClick={() => setSelectedSlot(s)} style={{
+                          padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500,
+                          background: selectedSlot?.sessionId === s.sessionId ? "var(--ember)" : "var(--card)",
+                          color: selectedSlot?.sessionId === s.sessionId ? "#fff" : "var(--bone)",
+                          border: selectedSlot?.sessionId === s.sessionId ? "none" : "1px solid var(--line)",
+                          cursor: "pointer",
+                        }}>{s.time}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {rescheduleError && <div className="modal-error" style={{ marginTop: 16 }}>{rescheduleError}</div>}
+
+                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeReschedule}>Cancel</button>
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setRescheduleStep(2)} disabled={!selectedSlot}>
+                    Review Change
+                  </button>
+                </div>
+              </>
+            )}
+
+            {rescheduleStep === 2 && selectedSlot && (
+              <>
+                <h2>Confirm Reschedule</h2>
+                <div className="reschedule-compare">
+                  <div className="resc-from">
+                    <div className="resc-label">From</div>
+                    <div className="resc-date">{fmtDate(rescheduleBooking.date)}</div>
+                    <div className="resc-time">{rescheduleBooking.time}</div>
+                  </div>
+                  <div className="resc-arrow"><Arrow s={24} /></div>
+                  <div className="resc-to">
+                    <div className="resc-label">To</div>
+                    <div className="resc-date">{fmtDate(selectedSlot.date)}</div>
+                    <div className="resc-time">{selectedSlot.time}</div>
+                  </div>
+                </div>
+                <p style={{ color: "var(--ash)", fontSize: 14, textAlign: "center", marginTop: 16 }}>
+                  {CLASS_MAP[rescheduleBooking.classType]?.label}
+                </p>
+                {rescheduleError && <div className="modal-error" style={{ marginTop: 16 }}>{rescheduleError}</div>}
+                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setRescheduleStep(1)} disabled={rescheduling}>Back</button>
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmReschedule} disabled={rescheduling}>
+                    {rescheduling ? "Rescheduling…" : "Confirm Change"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule success modal */}
+      {rescheduleSuccess && (
+        <div className="modal-overlay" onClick={closeReschedule}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="seal" style={{ margin: "0 auto 16px" }}><Check s={32} /></div>
+            <h2 style={{ textAlign: "center" }}>Session Rescheduled</h2>
+            <p style={{ color: "var(--ash)", fontSize: 14, textAlign: "center", marginBottom: 20 }}>
+              Your session has been moved. A confirmation email is on its way.
+            </p>
+            <div className="modal-session">
+              <div style={{ fontWeight: 600 }}>{CLASS_MAP[rescheduleSuccess.newBooking.classType]?.label}</div>
+              <div style={{ color: "var(--ash)", fontSize: 14 }}>{fmtDate(rescheduleSuccess.newBooking.date)} · {rescheduleSuccess.newBooking.time}</div>
+              <div style={{ color: "var(--ash)", fontSize: 12, marginTop: 4 }}>Confirmation: {rescheduleSuccess.newBooking.ref}</div>
+            </div>
+            <button className="btn btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={closeReschedule}>Done</button>
+          </div>
         </div>
       )}
     </div></div>
@@ -712,263 +972,6 @@ const SLabel = ({ children }) => (<div style={{ fontFamily: "var(--mono)", fontS
 // Parsed and read in UTC so a "YYYY-MM-DD" always renders as that same day,
 // regardless of the viewer's own timezone.
 function fmtDate(d) { const x = new Date(d + "T00:00:00.000Z"); return `${DOW[x.getUTCDay()]}, ${MON[x.getUTCMonth()]} ${x.getUTCDate()}`; }
-
-/* ---------- admin ---------- */
-function Admin({ bookings, updateBooking, leads, reloadLeads, loaded, user, isAdmin, status }) {
-  const [tab, setTab] = useState("calendar");
-  const [fStatus, setFStatus] = useState("all");
-  const [fWhen, setFWhen] = useState("upcoming");
-  const [todaySlots, setTodaySlots] = useState([]);
-  const [blocks, setBlocks] = useState([]);
-  const [blockForm, setBlockForm] = useState({ date: "", allDay: true, startTime: "06:00", endTime: "12:00", reason: "" });
-  const [blockBusy, setBlockBusy] = useState(false);
-  const [blockError, setBlockError] = useState(null);
-
-  // "Today" must be the studio's day, not the server's UTC day — after 5pm
-  // Pacific those differ and the dashboard would jump to tomorrow.
-  const today = studioNow().isoDay;
-  // Derived from the studio's day, not the viewer's, so the filters agree with `today`.
-  const weekEnd = iso(new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86400000));
-
-  const loadSchedule = React.useCallback(async () => {
-    const [s, b] = await Promise.all([
-      fetch(`/api/availability?from=${today}&to=${today}&includePast=true`)
-        .then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      fetch(`/api/admin/blocks?from=${today}`)
-        .then((r) => (r.ok ? r.json() : [])).catch(() => []),
-    ]);
-    setTodaySlots(s);
-    setBlocks(b);
-  }, [today]);
-
-  useEffect(() => { if (isAdmin) loadSchedule(); }, [isAdmin, loadSchedule, bookings]);
-
-  const addBlock = async () => {
-    if (!blockForm.date || blockBusy) return;
-    setBlockBusy(true);
-    setBlockError(null);
-    try {
-      const res = await fetch("/api/admin/blocks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(blockForm),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || "Could not save that block.");
-      setBlockForm({ date: "", allDay: true, startTime: "06:00", endTime: "12:00", reason: "" });
-      await loadSchedule();
-    } catch (e) {
-      setBlockError(e.message);
-    } finally {
-      setBlockBusy(false);
-    }
-  };
-
-  const removeBlock = async (id) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
-    try {
-      await fetch(`/api/admin/blocks/${id}`, { method: "DELETE" });
-    } finally {
-      await loadSchedule();
-    }
-  };
-
-  if (status === "loading") {
-    return <div className="adm"><div className="wrap"><div className="empty">Checking your session…</div></div></div>;
-  }
-
-  // Real authorisation now: the server rejects these endpoints for anyone
-  // without an ADMIN role, so this is just the matching UI.
-  if (!isAdmin) {
-    return (
-      <div className="adm"><div className="wrap"><div className="gate">
-        <div className="glock"><Lock /></div>
-        <h2>Coach Login</h2>
-        <p>
-          {user
-            ? "This dashboard is for Ignition staff. Your account doesn't have coach access."
-            : "This dashboard is for Ignition staff. Sign in with your coach account to manage bookings."}
-        </p>
-        {user
-          ? <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => signOut({ callbackUrl: "/" })}>Sign out</button>
-          : <a className="btn btn-primary" style={{ width: "100%" }} href="/login?next=/">Sign In</a>}
-      </div></div></div>
-    );
-  }
-
-  const filtered = bookings
-    .filter((b) => fStatus === "all" ? true : b.status === fStatus)
-    .filter((b) => {
-      if (fWhen === "today") return b.date === today;
-      if (fWhen === "week") return b.date >= today && b.date <= weekEnd;
-      if (fWhen === "upcoming") return b.date >= today;
-      return true;
-    })
-    .sort((a, b) => a.date === b.date ? toMin(a.time) - toMin(b.time) : a.date.localeCompare(b.date));
-
-  const active = bookings.filter((b) => b.status !== "cancelled");
-  const todays = active.filter((b) => b.date === today);
-  const upcoming = active.filter((b) => b.date >= today);
-  const weekCount = active.filter((b) => b.date >= today && b.date <= weekEnd).length;
-  // Capacity comes from the actual sessions on the schedule rather than a
-  // guessed constant, so the utilisation bar reflects real seats.
-  const seatsToday = todaySlots.reduce((n, s) => n + s.capacity, 0);
-  const totalCap = seatsToday ? Math.round((todays.length / seatsToday) * 100) : 0;
-
-  return (
-    <div className="adm"><div className="wrap">
-      <div className="adm-top">
-        <h1>Bookings Dashboard<small>IGNITION FITNESS · COACH MIKE</small></h1>
-        <button className="btn btn-ghost" onClick={() => signOut({ callbackUrl: "/" })}>Sign out</button>
-      </div>
-
-      <div className="kpis">
-        <div className="kpi"><div className="kn">{todays.length}</div><div className="kl">Booked Today</div>
-          <div className="kbar"><i style={{ width: Math.min(100, totalCap) + "%" }} /></div></div>
-        <div className="kpi"><div className="kn">{upcoming.length}</div><div className="kl">Upcoming Total</div></div>
-        <div className="kpi"><div className="kn">{weekCount}</div><div className="kl">Next 7 Days</div></div>
-        <div className="kpi"><div className="kn">{active.filter((b) => b.status === "pending").length}</div><div className="kl">Awaiting Confirm</div></div>
-      </div>
-
-      <div className="filters" style={{ marginBottom: 18 }}>
-        {[["calendar", "Calendar"], ["list", "Bookings List"], ["packages", "Members & Packages"]].map(([k, l]) => (
-          <button key={k} className={"fbtn" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>{l}</button>
-        ))}
-      </div>
-
-      {tab === "calendar" && (
-        <div style={{ marginBottom: 18 }}>
-          <AdminCalendar updateBooking={updateBooking} refreshKey={bookings.length} />
-        </div>
-      )}
-
-      {tab === "packages" && (
-        <div style={{ marginBottom: 18 }}>
-          <AdminPackages />
-        </div>
-      )}
-
-      <div className="adm-grid" style={tab !== "list" ? { gridTemplateColumns: "1fr" } : undefined}>
-        {tab === "list" && (
-        <div className="panel">
-          <div className="panel-h"><h3>Bookings</h3><span className="cnt">{filtered.length} shown</span></div>
-          <div className="filters" style={{ padding: "14px 22px 4px" }}>
-            {[["upcoming","Upcoming"],["today","Today"],["week","This Week"],["all","All Time"]].map(([k, l]) => (
-              <button key={k} className={"fbtn" + (fWhen === k ? " on" : "")} onClick={() => setFWhen(k)}>{l}</button>
-            ))}
-          </div>
-          <div className="filters" style={{ padding: "0 22px 12px" }}>
-            {[["all","Any"],["confirmed","Confirmed"],["pending","Pending"],["checked-in","Checked-in"],["cancelled","Cancelled"]].map(([k, l]) => (
-              <button key={k} className={"fbtn" + (fStatus === k ? " on" : "")} onClick={() => setFStatus(k)}>{l}</button>
-            ))}
-          </div>
-          <div>
-            {filtered.length === 0 && <div className="empty">No bookings match this filter.</div>}
-            {filtered.map((b) => (
-              <div className="book-row" key={b.id}>
-                <div className="avatar">{b.name.split(" ").map((x) => x[0]).slice(0, 2).join("")}</div>
-                <div className="bmeta">
-                  <div className="bn">{b.name}</div>
-                  <div className="bd">{CLASS_MAP[b.classType].label} · {fmtDate(b.date)} · {b.time} · {b.ref}</div>
-                </div>
-                <span className={"badge bg-" + b.status}>{b.status.replace("-", " ")}</span>
-                <div className="row-acts">
-                  {b.status !== "checked-in" && b.status !== "cancelled" && (
-                    <button className="iact go" title="Check in" onClick={() => updateBooking(b.id, { status: "checked-in" })}><Check /></button>
-                  )}
-                  {b.status === "pending" && (
-                    <button className="iact ok" title="Confirm" onClick={() => updateBooking(b.id, { status: "confirmed" })}><Bell s={14} /></button>
-                  )}
-                  {b.status !== "cancelled" && (
-                    <button className="iact no" title="Cancel" onClick={() => updateBooking(b.id, { status: "cancelled" })}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        {tab === "list" && (
-        <div className="panel">
-          <div className="panel-h"><h3>Today's Schedule</h3><span className="cnt">{fmtDate(today)}</span></div>
-          {todaySlots.length === 0 && <div className="empty">No classes scheduled today.</div>}
-          {todaySlots.map((s) => {
-            const pct = Math.round((s.booked / s.capacity) * 100);
-            const col = pct >= 100 ? "var(--flame)" : pct >= 70 ? "var(--gold)" : "var(--ember)";
-            return (
-              <div className="sched-row" key={s.sessionId}>
-                <div className="sched-time">{s.time}</div>
-                <div className="sched-info">
-                  <div className="st">{CLASS_MAP[s.classType].label}</div>
-                  <div className="capbar"><i style={{ width: Math.min(100, pct) + "%", background: col }} /></div>
-                </div>
-                <div className="sched-cnt" style={{ color: col }}>{s.booked}/{s.capacity}</div>
-              </div>
-            );
-          })}
-        </div>
-        )}
-
-        <div className="panel">
-          <div className="panel-h"><h3>Availability</h3><span className="cnt">{blocks.length} blocked</span></div>
-          <div style={{ padding: "14px 22px 18px" }}>
-            <p style={{ color: "var(--ash)", fontSize: 12.5, fontFamily: "var(--mono)", marginBottom: 14, lineHeight: 1.6 }}>
-              Close the studio for a date or a stretch of hours. Blocked times vanish from booking straight away.
-            </p>
-            <div className="blk-form">
-              <input type="date" min={today} value={blockForm.date}
-                onChange={(e) => setBlockForm({ ...blockForm, date: e.target.value })} />
-              <div className="blk-modes">
-                <button className={"fbtn" + (blockForm.allDay ? " on" : "")}
-                  onClick={() => setBlockForm({ ...blockForm, allDay: true })}>All day</button>
-                <button className={"fbtn" + (!blockForm.allDay ? " on" : "")}
-                  onClick={() => setBlockForm({ ...blockForm, allDay: false })}>Hours</button>
-              </div>
-              {!blockForm.allDay && (
-                <div className="blk-times">
-                  <input type="time" value={blockForm.startTime}
-                    onChange={(e) => setBlockForm({ ...blockForm, startTime: e.target.value })} />
-                  <span>to</span>
-                  <input type="time" value={blockForm.endTime}
-                    onChange={(e) => setBlockForm({ ...blockForm, endTime: e.target.value })} />
-                </div>
-              )}
-              <input placeholder="Reason (optional)" value={blockForm.reason}
-                onChange={(e) => setBlockForm({ ...blockForm, reason: e.target.value })} />
-              <button className="btn btn-primary" style={{ width: "100%" }}
-                disabled={!blockForm.date || blockBusy} onClick={addBlock}>
-                {blockBusy ? "Saving…" : "Block This Time"}
-              </button>
-              {blockError && <div className="blk-err">{blockError}</div>}
-            </div>
-          </div>
-          {blocks.length === 0 && <div className="empty">Nothing blocked. The full schedule is open.</div>}
-          {blocks.map((b) => (
-            <div className="lead-row" key={b.id}>
-              <div className="le">
-                {fmtDate(b.date)}
-                <span style={{ color: "var(--ash)", fontFamily: "var(--mono)", fontSize: 11.5, marginLeft: 8 }}>
-                  {b.allDay ? "all day" : `${to12h(b.startTime)} – ${to12h(b.endTime)}`}
-                </span>
-              </div>
-              {b.reason && <span className="lsrc">{b.reason}</span>}
-              <button className="iact no" title="Remove block" onClick={() => removeBlock(b.id)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <AdminLeads leads={leads} reload={reloadLeads} />
-        </div>
-      </div>
-    </div></div>
-  );
-}
 
 /* ---------- lead magnet ---------- */
 /* ---------- footer ---------- */

@@ -31,8 +31,14 @@ function LoginForm() {
       setBusy(false);
       return;
     }
-    router.push(next);
-    router.refresh();
+    // Fetch user role from server (more reliable than client getSession)
+    const me = await fetch("/api/me").then(r => r.json()).catch(() => ({}));
+    // Admin users always go to /admin
+    if (me?.user?.role === "ADMIN") {
+      window.location.href = "/admin";
+    } else {
+      window.location.href = next;
+    }
   };
 
   return (
