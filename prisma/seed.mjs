@@ -21,24 +21,21 @@ if (!connectionString) {
 
 const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
 
-// Mirrors the WEEKLY constant in app/page.jsx. 0=Sun … 6=Sat, times in 24h.
+// Mike's actual schedule. 0=Sun … 6=Sat, times in 24h.
+// Group: Mon/Wed 5:30pm, Sat 8:45am
 const GROUP_SLOTS = {
-  1: ["06:00", "09:00", "12:00", "17:30", "18:30"],
-  2: ["06:00", "09:00", "17:30", "18:30"],
-  3: ["06:00", "09:00", "12:00", "17:30", "18:30"],
-  4: ["06:00", "09:00", "17:30", "18:30"],
-  5: ["06:00", "09:00", "12:00", "17:30"],
-  6: ["08:00", "09:30"],
+  1: ["17:30"],        // Monday 5:30 PM
+  3: ["17:30"],        // Wednesday 5:30 PM
+  6: ["08:45"],        // Saturday 8:45 AM
 };
 
-// 1:1 slots sit at times the group schedule doesn't use, so one coach is never
-// double-booked. Capacity 1 by definition.
+// PT availability: 6am/8am/11am/1pm Mon-Fri, plus Tue 6pm, Thu 5pm
 const PT_SLOTS = {
-  1: ["07:30", "16:00"],
-  2: ["07:30"],
-  3: ["07:30", "16:00"],
-  4: ["07:30"],
-  5: ["16:00"],
+  1: ["06:00", "08:00", "11:00", "13:00"],  // Monday
+  2: ["06:00", "08:00", "11:00", "13:00", "18:00"],  // Tuesday + 6pm
+  3: ["06:00", "08:00", "11:00", "13:00"],  // Wednesday
+  4: ["06:00", "08:00", "11:00", "13:00", "17:00"],  // Thursday + 5pm
+  5: ["06:00", "08:00", "11:00", "13:00"],  // Friday
 };
 
 // Prices mirror the pricing cards in app/page.jsx.
@@ -95,6 +92,49 @@ async function main() {
   }
   await prisma.weeklyTemplate.createMany({ data: templates });
   console.log(`weekly template: ${templates.length} recurring slots`);
+
+  // ---- generate 8 weeks of sessions ----
+  const WEEKS_AHEAD = 8;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Clear existing future sessions (keeps past bookings intact)
+  await prisma.classSession.deleteMany({
+    where: { date: { gte: today } }
+  });
+
+  const sessions = [];
+  for (let week = 0; week < WEEKS_AHEAD; week++) {
+    for (const tmpl of templates) {
+      // Find next occurrence of this day of week
+      const date = new Date(today);
+      date.setDate(date.getDate() + ((tmpl.dayOfWeek - date.getDay() + 7) % 7) + (week * 7));
+
+      // Skip if date is in the past
+      if (date < today) continue;
+
+      sessions.push({
+        date: date,
+        startTime: tmpl.startTime,
+        type: tmpl.type,
+        capacity: tmpl.capacity,
+        durationMin: tmpl.durationMin,
+        status: "SCHEDULED",
+      });
+    }
+  }
+
+  // Use createMany with skipDuplicates to avoid conflicts
+  let created = 0;
+  for (const sess of sessions) {
+    try {
+      await prisma.classSession.create({ data: sess });
+      created++;
+    } catch (e) {
+      // Skip duplicates (unique constraint on date+startTime+type)
+    }
+  }
+  console.log(`sessions: ${created} bookable slots for next ${WEEKS_AHEAD} weeks`);
 
   // ---- package catalog ----
   for (const p of PACKAGES) {
