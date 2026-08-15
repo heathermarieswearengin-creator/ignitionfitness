@@ -12,6 +12,17 @@ function iso(d) {
   return d.toISOString().slice(0, 10);
 }
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "confirmed", label: "Confirmed" },
@@ -32,6 +43,7 @@ export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [whenFilter, setWhenFilter] = useState("upcoming");
   const [updating, setUpdating] = useState(null);
+  const isMobile = useIsMobile();
 
   const today = studioNow().isoDay;
   const weekEnd = iso(new Date(Date.parse(today + "T00:00:00.000Z") + 7 * 86400000));
@@ -76,6 +88,12 @@ export default function BookingsPage() {
     return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   };
 
+  const statusBadgeClass = (status) => {
+    if (status === "confirmed") return "adm-badge-green";
+    if (status === "pending") return "adm-badge-yellow";
+    return "adm-badge-red";
+  };
+
   return (
     <div>
       <div className="adm-page-header">
@@ -84,15 +102,17 @@ export default function BookingsPage() {
       </div>
 
       <div className="adm-card">
-        <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        {/* Filter rows - horizontally scrollable on mobile */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
           <div>
             <div className="adm-label" style={{ marginBottom: 8 }}>Status</div>
-            <div className="adm-filters" style={{ marginBottom: 0 }}>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
               {STATUS_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   className={"adm-filter-btn " + (statusFilter === opt.value ? "active" : "")}
                   onClick={() => setStatusFilter(opt.value)}
+                  style={{ flexShrink: 0 }}
                 >
                   {opt.label}
                 </button>
@@ -101,12 +121,13 @@ export default function BookingsPage() {
           </div>
           <div>
             <div className="adm-label" style={{ marginBottom: 8 }}>When</div>
-            <div className="adm-filters" style={{ marginBottom: 0 }}>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
               {WHEN_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   className={"adm-filter-btn " + (whenFilter === opt.value ? "active" : "")}
                   onClick={() => setWhenFilter(opt.value)}
+                  style={{ flexShrink: 0 }}
                 >
                   {opt.label}
                 </button>
@@ -128,7 +149,78 @@ export default function BookingsPage() {
             </div>
             <p>No bookings match your filters</p>
           </div>
+        ) : isMobile ? (
+          /* Mobile: Card layout */
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filtered.map(b => (
+              <div
+                key={b.id}
+                style={{
+                  padding: 16,
+                  background: "white",
+                  border: "1px solid #e7e5e4",
+                  borderRadius: 10,
+                  borderLeft: `4px solid ${b.classType === "pt" ? "#a855f7" : "#22c55e"}`,
+                }}
+              >
+                {/* Top row: Name + Status badge */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c1917", marginBottom: 2 }}>
+                      {b.name}
+                    </div>
+                    <div style={{
+                      fontSize: 13,
+                      color: "#78716c",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {b.email}
+                    </div>
+                  </div>
+                  <span className={"adm-badge " + statusBadgeClass(b.status)} style={{ flexShrink: 0, marginLeft: 8 }}>
+                    {b.status}
+                  </span>
+                </div>
+
+                {/* Date/Time row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 13, color: "#57534e" }}>
+                  <span style={{ fontWeight: 500 }}>{formatDate(b.date)}</span>
+                  <span style={{ color: "#a8a29e" }}>·</span>
+                  <span>{b.time}</span>
+                  <span style={{ color: "#a8a29e" }}>·</span>
+                  <span className={"adm-badge " + (b.classType === "pt" ? "adm-badge-gray" : "adm-badge-green")} style={{ fontSize: 11 }}>
+                    {b.classType === "pt" ? "1:1" : "Group"}
+                  </span>
+                </div>
+
+                {/* Bottom row: Ref + Actions */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 11, color: "#a8a29e" }}>{b.ref}</span>
+                  {b.status !== "cancelled" && (
+                    <button
+                      className="adm-btn"
+                      style={{
+                        padding: "8px 14px",
+                        fontSize: 12,
+                        background: "#fef2f2",
+                        color: "#991b1b",
+                        border: "1px solid #fecaca",
+                        minHeight: 36,
+                      }}
+                      onClick={() => updateStatus(b.id, "cancelled")}
+                      disabled={updating === b.id}
+                    >
+                      {updating === b.id ? "..." : "Cancel"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
+          /* Desktop: Table layout */
           <div style={{ overflowX: "auto" }}>
             <table className="adm-table">
               <thead>
@@ -158,11 +250,7 @@ export default function BookingsPage() {
                       </span>
                     </td>
                     <td>
-                      <span className={"adm-badge " + (
-                        b.status === "confirmed" ? "adm-badge-green" :
-                        b.status === "pending" ? "adm-badge-yellow" :
-                        "adm-badge-red"
-                      )}>
+                      <span className={"adm-badge " + statusBadgeClass(b.status)}>
                         {b.status}
                       </span>
                     </td>
