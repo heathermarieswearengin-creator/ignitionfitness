@@ -764,7 +764,9 @@ function Booking({ addBooking, go, user }) {
       reloadSlots();
     } catch (e) {
       console.error("Booking error:", e);
-      setError(e.message || "Something went wrong. Please try again.");
+      // Ensure error is always a string for safe rendering
+      const errorMsg = typeof e === "string" ? e : (e?.message || "Something went wrong. Please try again.");
+      setError(errorMsg);
       reloadSlots();
     } finally {
       setSaving(false);
