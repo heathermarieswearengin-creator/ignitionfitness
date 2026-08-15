@@ -636,44 +636,43 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 /* Action cards */
 .my-sessions-actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px}
 .ms-action-card{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
-  background:var(--f900);border:2px solid var(--line);border-radius:16px;padding:22px 24px;
+  background:#1d1411 !important;border:2px solid var(--line);border-radius:16px;padding:22px 24px;
   color:var(--bone);cursor:pointer;transition:all .2s ease}
 .ms-action-card:hover{border-color:var(--ember);transform:translateY(-3px);
   box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.ms-action-card.primary{background:linear-gradient(135deg,var(--flame) 0%,var(--ember) 100%);
+.ms-action-card.primary{background:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important;
   border-color:transparent;box-shadow:0 8px 28px rgba(224,45,36,.35)}
 .ms-action-card.primary:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(224,45,36,.45)}
 .ms-action-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;flex:none;
-  background:rgba(255,255,255,.1)}
-.ms-action-card:not(.primary) .ms-action-icon{background:linear-gradient(150deg,rgba(224,45,36,.15),rgba(150,22,16,.05));
-  color:var(--ember2)}
-.ms-action-text{flex:1;min-width:0}
+  background:rgba(255,255,255,.12)}
+.ms-action-card:not(.primary) .ms-action-icon{background:rgba(224,45,36,.12);color:#f0ab33}
+.ms-action-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .ms-action-title{display:block;font-family:var(--display);font-size:20px;text-transform:uppercase;
-  letter-spacing:.02em;line-height:1.1}
-.ms-action-sub{display:block;font-size:13px;color:rgba(255,255,255,.7);margin-top:4px;font-weight:500}
-.ms-action-card:not(.primary) .ms-action-sub{color:var(--ash)}
-.ms-action-card > svg{flex:none;opacity:.6;transition:.15s}
+  letter-spacing:.02em;line-height:1.1;color:#f3ece1}
+.ms-action-sub{display:block;font-size:13px;color:rgba(255,255,255,.65);font-weight:500}
+.ms-action-card:not(.primary) .ms-action-sub{color:#b0a193}
+.ms-action-card > svg{flex:none;opacity:.6;transition:.15s;color:#f3ece1}
 .ms-action-card:hover > svg{opacity:1;transform:translateX(3px)}
 
 /* Sessions panel */
-.my-sessions-panel{background:var(--f900);border:1.5px solid var(--line);border-radius:20px;
+.my-sessions-panel{background:#140d0b;border:1.5px solid #3a261d;border-radius:20px;
   overflow:hidden;margin-bottom:24px}
 .my-sessions-panel.past-panel{opacity:.85}
 .ms-panel-header{display:flex;align-items:center;justify-content:space-between;
-  padding:20px 28px;border-bottom:1px solid var(--line)}
+  padding:20px 28px;border-bottom:1px solid #3a261d;background:#1d1411}
 .ms-panel-header h2{font-family:var(--display);font-size:22px;text-transform:uppercase;
-  letter-spacing:.02em}
-.ms-panel-count{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ember2);
+  letter-spacing:.02em;color:#f3ece1}
+.ms-panel-count{font-family:var(--mono);font-size:13px;font-weight:700;color:#f0ab33;
   background:rgba(224,45,36,.15);padding:5px 12px;border-radius:20px}
-.ms-panel-body{padding:24px 28px}
-.ms-loading{text-align:center;color:var(--ash);font-family:var(--mono);font-size:13px;padding:40px 0}
+.ms-panel-body{padding:24px 28px;background:#140d0b}
+.ms-loading{text-align:center;color:#b0a193;font-family:var(--mono);font-size:13px;padding:40px 0}
 
 /* Empty state */
 .ms-empty-state{text-align:center;padding:48px 20px 56px}
 .ms-empty-icon{width:100px;height:100px;border-radius:24px;margin:0 auto 28px;display:grid;place-items:center;
-  background:linear-gradient(150deg,var(--f800),var(--f700));border:1.5px solid var(--line);color:var(--ember2)}
-.ms-empty-state h3{font-family:var(--display);font-size:28px;text-transform:uppercase;margin-bottom:12px}
-.ms-empty-state p{color:var(--ash);font-size:15px;line-height:1.6;margin-bottom:28px;max-width:300px;margin-left:auto;margin-right:auto}
+  background:linear-gradient(150deg,#1d1411,#281a15);border:1.5px solid #3a261d;color:#f0ab33}
+.ms-empty-state h3{font-family:var(--display);font-size:28px;text-transform:uppercase;margin-bottom:12px;color:#f3ece1}
+.ms-empty-state p{color:#b0a193;font-size:15px;line-height:1.6;margin-bottom:28px;max-width:300px;margin-left:auto;margin-right:auto}
 .ms-empty-state .btn{padding:14px 32px;font-size:13px}
 
 /* Session rows */
@@ -737,6 +736,8 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .my-sessions-actions{grid-template-columns:1fr;gap:12px;margin-bottom:32px}
   .ms-action-card{padding:18px 20px;gap:14px;border-radius:14px;
     -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .ms-action-card:not(.primary){background:#1d1411 !important;border-color:#3a261d}
+  .ms-action-card.primary{background:linear-gradient(135deg,#e02d24 0%,#c9251c 100%) !important}
   .ms-action-card:active{transform:scale(.98);opacity:.9}
   .ms-action-card.primary:active{box-shadow:0 4px 16px rgba(224,45,36,.4)}
   .ms-action-icon{width:48px;height:48px;border-radius:12px}
@@ -745,11 +746,11 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
   .ms-action-card > svg{display:none}
 
   /* Panel */
-  .my-sessions-panel{border-radius:16px;margin-bottom:20px}
-  .ms-panel-header{padding:16px 18px}
+  .my-sessions-panel{border-radius:16px;margin-bottom:20px;background:#140d0b;border-color:#3a261d}
+  .ms-panel-header{padding:16px 18px;background:#1d1411}
   .ms-panel-header h2{font-size:17px}
   .ms-panel-count{font-size:12px;padding:4px 10px}
-  .ms-panel-body{padding:16px}
+  .ms-panel-body{padding:16px;background:#140d0b}
 
   /* Empty state */
   .ms-empty-state{padding:40px 16px 48px}
