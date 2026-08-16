@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/admin/schedule", label: "Schedule", icon: "calendar" },
   { href: "/admin/bookings", label: "Bookings", icon: "list" },
   { href: "/admin/availability", label: "Availability", icon: "clock" },
+  { href: "/admin/standing-clients", label: "Standing Clients", icon: "repeat" },
   { href: "/admin/members", label: "Members", icon: "users" },
   { href: "/admin/leads", label: "Leads", icon: "inbox" },
 ];
@@ -19,6 +20,7 @@ function Icon({ name, size = 20 }) {
     calendar: <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />,
     list: <path d="M9 6h11M9 12h11M9 18h11M5 6h.01M5 12h.01M5 18h.01" />,
     clock: <circle cx="12" cy="12" r="10" />,
+    repeat: <><path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 014-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 01-4 4H3" /></>,
     users: <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />,
     inbox: <path d="M22 12h-6l-2 3H10l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />,
     menu: <path d="M3 12h18M3 6h18M3 18h18" />,

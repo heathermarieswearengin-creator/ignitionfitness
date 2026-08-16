@@ -16,6 +16,7 @@ export default function SchedulePage() {
   const [slots, setSlots] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [blocks, setBlocks] = useState([]);
+  const [standingClients, setStandingClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
@@ -81,14 +82,16 @@ export default function SchedulePage() {
     const from = viewMode === "week" ? weekStart : monthDays[0].date;
     const to = viewMode === "week" ? weekEnd : monthDays[monthDays.length - 1].date;
 
-    const [s, b, bl] = await Promise.all([
+    const [s, b, bl, sc] = await Promise.all([
       fetch(`/api/availability?from=${from}&to=${to}&includePast=true`).then(r => r.ok ? r.json() : []).catch(() => []),
       fetch("/api/admin/bookings").then(r => r.ok ? r.json() : []).catch(() => []),
       fetch(`/api/admin/blocks?from=${from}`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/admin/standing-clients").then(r => r.ok ? r.json() : []).catch(() => []),
     ]);
     setSlots(s);
     setBookings(b.filter(x => x.date >= from && x.date <= to));
     setBlocks(bl);
+    setStandingClients(sc.filter(x => x.active && !x.ended));
     setLoading(false);
   }, [viewMode, weekStart, weekEnd, monthDays]);
 
@@ -124,6 +127,24 @@ export default function SchedulePage() {
   const getSlotsForDate = (date) => slots.filter(s => s.date === date);
   const getBookingsForSlot = (sessionId) => bookings.filter(b => b.sessionId === sessionId);
   const isBlocked = (date) => blocks.some(b => b.date === date);
+
+  // Check if a PT slot is covered by a standing client
+  const getStandingClientForSlot = (date, startTime, type) => {
+    if (type !== "PT") return null;
+    const d = new Date(`${date}T00:00:00.000Z`);
+    const dow = d.getUTCDay();
+
+    for (const sc of standingClients) {
+      if (!sc.daysOfWeek.includes(dow)) continue;
+      if (sc.startTime !== startTime) continue;
+      if (sc.endDate && date > sc.endDate) continue;
+      if (sc.upcomingSkips?.includes(date)) continue;
+      return sc;
+    }
+    return null;
+  };
+
+  const getInitials = (name) => (name || "").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   const formatDateLabel = (date) => {
     const d = new Date(`${date}T00:00:00.000Z`);
@@ -209,24 +230,39 @@ export default function SchedulePage() {
                       {daySlots.map(slot => {
                         const slotBookings = getBookingsForSlot(slot.sessionId);
                         const isFull = slotBookings.length >= slot.capacity;
+                        const standingClient = getStandingClientForSlot(date, slot.startTime, slot.type);
 
                         return (
                           <button
                             key={slot.sessionId}
-                            onClick={() => setSelectedSlot(selectedSlot?.sessionId === slot.sessionId ? null : slot)}
+                            onClick={() => setSelectedSlot(selectedSlot?.sessionId === slot.sessionId ? null : { ...slot, standingClient })}
                             style={{
                               padding: "8px 10px",
-                              background: isFull ? "#fee2e2" : "white",
-                              border: `1px solid ${isFull ? "#fecaca" : "#e7e5e4"}`,
+                              background: standingClient ? "#f3e8ff" : isFull ? "#fee2e2" : "white",
+                              border: `1.5px solid ${standingClient ? "#a855f7" : isFull ? "#fecaca" : "#e7e5e4"}`,
                               borderRadius: 6,
                               cursor: "pointer",
                               textAlign: "left",
                             }}
                           >
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1917" }}>{slot.time}</div>
-                            <div style={{ fontSize: 11, color: "#78716c" }}>
-                              {slot.classType === "pt" ? "1:1" : "Group"} · {slotBookings.length}/{slot.capacity}
-                            </div>
+                            {standingClient ? (
+                              <>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <span style={{ fontSize: 12 }}>🔁</span>
+                                  <span style={{ fontSize: 13, fontWeight: 600, color: "#7c3aed" }}>{slot.time}</span>
+                                </div>
+                                <div style={{ fontSize: 11, color: "#7c3aed" }}>
+                                  {getInitials(standingClient.memberName)} · Standing
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1917" }}>{slot.time}</div>
+                                <div style={{ fontSize: 11, color: "#78716c" }}>
+                                  {slot.classType === "pt" ? "1:1" : "Group"} · {slotBookings.length}/{slot.capacity}
+                                </div>
+                              </>
+                            )}
                           </button>
                         );
                       })}
@@ -301,30 +337,88 @@ export default function SchedulePage() {
         }} onClick={() => setSelectedSlot(null)}>
           <div className="adm-card" style={{ maxWidth: 400, width: "100%" }} onClick={e => e.stopPropagation()}>
             <div className="adm-card-header">
-              <h2 className="adm-card-title">
+              <h2 className="adm-card-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {selectedSlot.standingClient && <span>🔁</span>}
                 {selectedSlot.date} at {selectedSlot.time}
               </h2>
-              <button onClick={() => setSelectedSlot(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#78716c" }}>
+              <button onClick={() => setSelectedSlot(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#78716c", fontSize: 20 }}>
                 &times;
               </button>
             </div>
-            <div style={{ fontSize: 14, color: "#78716c", marginBottom: 16 }}>
-              {selectedSlot.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
-            </div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>
-              Bookings ({getBookingsForSlot(selectedSlot.sessionId).length}/{selectedSlot.capacity})
-            </div>
-            {getBookingsForSlot(selectedSlot.sessionId).length === 0 ? (
-              <p style={{ color: "#78716c", fontSize: 14 }}>No bookings yet</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {getBookingsForSlot(selectedSlot.sessionId).map(b => (
-                  <div key={b.id} style={{ padding: 10, background: "#fafaf9", borderRadius: 6 }}>
-                    <div style={{ fontWeight: 500 }}>{b.name}</div>
-                    <div style={{ fontSize: 13, color: "#78716c" }}>{b.email}</div>
+
+            {selectedSlot.standingClient ? (
+              <>
+                <div style={{
+                  padding: 14,
+                  background: "#f3e8ff",
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  border: "1px solid #e9d5ff",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 9,
+                      background: "#7c3aed",
+                      color: "#fff",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}>
+                      {getInitials(selectedSlot.standingClient.memberName)}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: "#581c87" }}>{selectedSlot.standingClient.memberName}</div>
+                      <div style={{ fontSize: 12, color: "#7c3aed" }}>Standing Client</div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div style={{ fontSize: 13, color: "#6b21a8" }}>
+                    Every {selectedSlot.standingClient.daysLabel} · {selectedSlot.standingClient.endDate ? `Until ${selectedSlot.standingClient.endDate}` : "Ongoing"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <a
+                    href={`/admin/standing-clients`}
+                    style={{
+                      flex: 1,
+                      padding: "10px 14px",
+                      background: "#f5f5f4",
+                      border: "1px solid #e7e5e4",
+                      borderRadius: 8,
+                      textAlign: "center",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#1c1917",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Manage Standing Client
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 14, color: "#78716c", marginBottom: 16 }}>
+                  {selectedSlot.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
+                </div>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                  Bookings ({getBookingsForSlot(selectedSlot.sessionId).length}/{selectedSlot.capacity})
+                </div>
+                {getBookingsForSlot(selectedSlot.sessionId).length === 0 ? (
+                  <p style={{ color: "#78716c", fontSize: 14 }}>No bookings yet</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {getBookingsForSlot(selectedSlot.sessionId).map(b => (
+                      <div key={b.id} style={{ padding: 10, background: "#fafaf9", borderRadius: 6 }}>
+                        <div style={{ fontWeight: 500 }}>{b.name}</div>
+                        <div style={{ fontSize: 13, color: "#78716c" }}>{b.email}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

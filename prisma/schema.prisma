@@ -38,18 +38,19 @@ enum PaymentStatus {
 }
 
 model User {
-  id           String          @id @default(cuid())
-  email        String          @unique
-  passwordHash String
-  name         String
-  phone        String?
-  role         Role            @default(MEMBER)
-  createdAt    DateTime        @default(now())
-  archived     Boolean         @default(false)
-  bookings     Booking[]
-  packages     MemberPackage[]
-  adminLogs    PackageLog[]    @relation("AdminLogs")
-  resetTokens  PasswordResetToken[]
+  id              String          @id @default(cuid())
+  email           String          @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  role            Role            @default(MEMBER)
+  createdAt       DateTime        @default(now())
+  archived        Boolean         @default(false)
+  bookings        Booking[]
+  packages        MemberPackage[]
+  adminLogs       PackageLog[]    @relation("AdminLogs")
+  resetTokens     PasswordResetToken[]
+  standingClients StandingClient[]
 }
 
 // Single-use, short-lived password reset tokens.
@@ -196,4 +197,33 @@ model AvailabilityBlock {
   createdAt DateTime @default(now())
 
   @@index([date])
+}
+
+// Recurring weekly 1:1 appointments for permanent clients
+model StandingClient {
+  id          String   @id @default(cuid())
+  member      User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId    String
+  daysOfWeek  Int[]    // [2, 4] = Tuesday & Thursday (0=Sun...6=Sat)
+  startTime   String   // "06:00" (24h format)
+  durationMin Int      @default(60)
+  endDate     DateTime? @db.Date // null = ongoing
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  skips       StandingClientSkip[]
+
+  @@index([memberId])
+}
+
+// Track skipped single occurrences (e.g., client on vacation)
+model StandingClientSkip {
+  id               String         @id @default(cuid())
+  standingClient   StandingClient @relation(fields: [standingClientId], references: [id], onDelete: Cascade)
+  standingClientId String
+  date             DateTime       @db.Date
+  reason           String?
+  createdAt        DateTime       @default(now())
+
+  @@unique([standingClientId, date])
+  @@index([standingClientId])
 }
