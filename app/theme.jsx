@@ -1039,15 +1039,15 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 .btn-cancel:hover{background:rgba(150,22,16,.35);border-color:var(--flame)}
 
 /* ===== INTERIOR PAGE HEADER (reusable) ===== */
-.page-header{position:relative;padding:90px 0 50px;overflow:hidden}
-.page-header::before{content:'';position:absolute;top:-50px;left:-100px;width:500px;height:400px;
-  background:radial-gradient(ellipse,rgba(224,45,36,.18),transparent 65%);filter:blur(60px);pointer-events:none}
+.page-header{position:relative;padding:90px 0 50px;overflow:hidden;text-align:center}
+.page-header::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:600px;height:400px;
+  background:radial-gradient(ellipse,rgba(224,45,36,.15),transparent 60%);filter:blur(60px);pointer-events:none}
 .page-header .wrap{position:relative;z-index:2}
-.page-header .eyebrow{margin-bottom:16px}
-.page-header .page-title{font-family:var(--display);font-size:clamp(42px,8vw,64px);line-height:.92;
-  text-transform:uppercase;letter-spacing:.01em;color:var(--bone);margin:0 0 14px}
-.page-header .page-sub{color:var(--ash);font-size:17px;line-height:1.5;margin:0;max-width:420px}
-@media(max-width:860px){.page-header{padding:70px 0 40px}}
+.page-header .eyebrow{margin-bottom:20px;display:inline-flex}
+.page-header .page-title{font-family:var(--display);font-size:clamp(48px,10vw,72px);line-height:.92;
+  text-transform:uppercase;letter-spacing:.01em;color:var(--bone);margin:0 0 18px}
+.page-header .page-sub{color:var(--ash);font-size:18px;line-height:1.5;margin:0 auto;max-width:520px}
+@media(max-width:860px){.page-header{padding:70px 0 40px}.page-header .page-title{font-size:clamp(40px,9vw,56px)}}
 @media(max-width:500px){.page-header{padding:60px 0 32px}.page-header .page-sub{font-size:15px}}
 
 /* ===== STUDIO PAGE GALLERY ===== */
