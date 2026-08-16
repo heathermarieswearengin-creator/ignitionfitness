@@ -1345,6 +1345,8 @@ function Booking({ addBooking, go, user }) {
   const [error, setError] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
+  // User's existing bookings (for calendar highlighting)
+  const [myBookings, setMyBookings] = useState([]);
 
   const [viewMonth, setViewMonth] = useState(() => {
     const now = studioNow();
@@ -1368,6 +1370,19 @@ function Booking({ addBooking, go, user }) {
 
   useEffect(() => { reloadSlots(); }, [reloadSlots]);
   useEffect(() => { if (user) setForm((f) => ({ ...f, name: user.name || "", email: user.email || "" })); }, [user]);
+
+  // Fetch user's existing bookings for calendar highlighting
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/me/bookings")
+      .then((r) => r.ok ? r.json() : { upcoming: [] })
+      .then((data) => setMyBookings(data.upcoming || []))
+      .catch(() => setMyBookings([]));
+  }, [user]);
+
+  // Helper to get user's bookings for a specific date
+  const getMyBookingsForDate = (dateIso) => myBookings.filter(b => b.date === dateIso && b.status !== "cancelled");
+  const hasMyBookingOnDate = (dateIso) => getMyBookingsForDate(dateIso).length > 0;
 
   const slotsForDate = (d) => slots.filter((s) => s.date === d && s.classType === classType);
   const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
@@ -1568,6 +1583,8 @@ function Booking({ addBooking, go, user }) {
                 const isToday = iso === todayIso;
                 // Count how many slots are selected for this date
                 const selectedCountForDate = selectedSlots.filter(s => s.date === iso).length;
+                // Check if user already has a booking on this date
+                const hasExistingBooking = user && hasMyBookingOnDate(iso);
 
                 const baseStyle = {
                   width: "100%",
@@ -1598,6 +1615,11 @@ function Booking({ addBooking, go, user }) {
                   style.background = "var(--ember)";
                   style.borderColor = "var(--ember)";
                   style.color = "#fff";
+                } else if (hasAvail && hasExistingBooking) {
+                  // Day with availability AND existing booking - green tint
+                  style.background = "rgba(34,197,94,.15)";
+                  style.borderColor = "#22c55e";
+                  style.color = "var(--bone)";
                 } else if (hasAvail) {
                   style.background = "rgba(224,45,36,.1)";
                   style.borderColor = "var(--ember)";
@@ -1626,6 +1648,14 @@ function Booking({ addBooking, go, user }) {
                     onClick={() => { setSelectedDate(iso); setSelectedSlot(null); }}
                   >
                     {date.getUTCDate()}
+                    {/* Green dot for days with existing bookings */}
+                    {hasExistingBooking && !outside && !isPast && (
+                      <span style={{
+                        position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
+                        width: 5, height: 5, borderRadius: "50%",
+                        background: "#22c55e",
+                      }} />
+                    )}
                     {/* Badge showing count of selected slots for this date */}
                     {selectedCountForDate > 0 && (
                       <span style={{
@@ -1642,8 +1672,56 @@ function Booking({ addBooking, go, user }) {
                 );
               })}
             </div>
+            {/* Legend for calendar states - only show for logged-in users */}
+            {user && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+                marginTop: 16, flexWrap: "wrap"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(224,45,36,.1)", border: "2px solid var(--ember)" }} />
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ash)", letterSpacing: ".03em" }}>Available</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--ember)" }} />
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ash)", letterSpacing: ".03em" }}>Selected</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ position: "relative", width: 12, height: 12, borderRadius: 3, background: "rgba(34,197,94,.15)", border: "2px solid #22c55e" }}>
+                    <span style={{ position: "absolute", bottom: 1, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#22c55e" }} />
+                  </span>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ash)", letterSpacing: ".03em" }}>You're booked</span>
+                </div>
+              </div>
+            )}
           </div>
           {selectedDate && (<div style={{ marginTop: 24 }}>
+            {/* Contextual banner for existing bookings on selected date */}
+            {user && hasMyBookingOnDate(selectedDate) && (
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.3)",
+                borderRadius: 10, padding: "12px 14px", marginBottom: 16
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+                  <path d="M8 12l3 3 5-6" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, color: "#22c55e", letterSpacing: ".03em", marginBottom: 4 }}>
+                    You already have a session booked
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--bone)", lineHeight: 1.4 }}>
+                    {getMyBookingsForDate(selectedDate).map((b, i) => (
+                      <div key={b.id}>
+                        {CLASS_MAP[b.classType]?.label || b.classType} · {b.time}
+                        {i < getMyBookingsForDate(selectedDate).length - 1 && <br />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <SLabel>Available times on {fmtDate(selectedDate)}</SLabel>
             <div className="slot-grid">
               {slotsForDate(selectedDate).map((s) => {
