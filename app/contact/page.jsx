@@ -56,6 +56,42 @@ const CheckCircle = ({ s = 48 }) => (
 const PHONE_NUMBER = "(909) 921-4463";
 const PHONE_TEL = "tel:+19099214463";
 
+// Shared footer component for this page
+function Footer({ router }) {
+  return (
+    <footer className="foot">
+      <div className="wrap">
+        <div className="foot-grid">
+          <div>
+            <button className="logo" onClick={() => router.push("/")} style={{ marginBottom: 16 }}>
+              <Logo h={44} />
+            </button>
+            <p style={{ maxWidth: "34ch" }}>Forging strength, one swing at a time. Small-group kettlebell training in Rancho Cucamonga.</p>
+          </div>
+          <div>
+            <h5>Navigate</h5>
+            <a href="/">Home</a>
+            <a href="/our-story">Our Story</a>
+            <a href="/studio">The Studio</a>
+            <a href="/#pricing">Pricing</a>
+            <a href="/contact">Contact</a>
+          </div>
+          <div>
+            <h5>Contact</h5>
+            <a href="mailto:mike@ignitionfitness.com">mike@ignitionfitness.com</a>
+            <a href="tel:9099214463">(909) 921-4463</a>
+            <p>9125 Archibald Ave, Ste D<br />Rancho Cucamonga, CA 91730</p>
+          </div>
+        </div>
+        <div className="foot-bottom">
+          <span>© {new Date().getFullYear()} Ignition Fitness. All rights reserved.</span>
+          <span>Rancho Cucamonga, CA</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function ContactPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -76,9 +112,8 @@ export default function ContactPage() {
 
   // Generate timing token on mount
   useEffect(() => {
-    // Simple client-side timing token: base64 of load timestamp
     const timestamp = Date.now();
-    const secretNum = 42; // Must match server-side calculation approach
+    const secretNum = 42;
     const obfuscated = timestamp ^ (secretNum * 100);
     setTimingToken(btoa(`${obfuscated}.${timestamp % 1000}`));
   }, []);
@@ -114,9 +149,8 @@ export default function ContactPage() {
           phone: form.phone.trim() || null,
           interest: form.interest || null,
           message: form.message.trim(),
-          // Bot protection fields
-          website: honeypot, // Honeypot field (should be empty)
-          _t: timingToken,   // Timing token
+          website: honeypot,
+          _t: timingToken,
         }),
       });
 
@@ -139,38 +173,55 @@ export default function ContactPage() {
     if (errors[field]) setErrors((er) => ({ ...er, [field]: null }));
   };
 
-  // Success state
+  // Success state - includes Nav and Footer with booking CTA
   if (submitted) {
     return (
       <div className="ign">
         <Theme />
-        <div className="wrap" style={{ padding: "60px 24px" }}>
-          <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
-            <div style={{
-              width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
-              display: "grid", placeItems: "center",
-              background: "linear-gradient(150deg, var(--f800), var(--f700))",
-              border: "1.5px solid var(--line)", color: "#22c55e"
-            }}>
-              <CheckCircle s={48} />
-            </div>
-            <h1 style={{
-              fontFamily: "var(--display)", fontSize: 32, textTransform: "uppercase",
-              color: "var(--bone)", marginBottom: 12
-            }}>Message Sent</h1>
-            <p style={{ color: "var(--ash)", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
-              Thanks for reaching out. We'll get back to you within 24 hours.
-            </p>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="/" className="btn btn-ghost">
-                Back to Home
-              </a>
-              <button onClick={() => setSubmitted(false)} className="btn btn-ghost">
-                Send Another
-              </button>
+        <Nav activePage="contact" />
+        <section className="section" style={{ minHeight: "50vh", display: "flex", alignItems: "center" }}>
+          <div className="wrap">
+            <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
+              <div style={{
+                width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
+                display: "grid", placeItems: "center",
+                background: "linear-gradient(150deg, var(--f800), var(--f700))",
+                border: "1.5px solid var(--line)", color: "#22c55e"
+              }}>
+                <CheckCircle s={48} />
+              </div>
+              <h1 style={{
+                fontFamily: "var(--display)", fontSize: "clamp(28px, 6vw, 36px)", textTransform: "uppercase",
+                color: "var(--bone)", marginBottom: 12
+              }}>Message Sent</h1>
+              <p style={{ color: "var(--ash)", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
+                Thanks for reaching out. We'll get back to you within 24 hours.
+              </p>
+
+              {/* Primary action - Book a Session */}
+              <div style={{ marginBottom: 20 }}>
+                <a href="/" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+                  Book a Session
+                  <ArrowRight s={14} />
+                </a>
+                <p style={{ fontSize: 13, color: "var(--ash)", marginTop: 8 }}>
+                  Ready to get started? Book your first class now.
+                </p>
+              </div>
+
+              {/* Secondary actions */}
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                <a href="/" className="btn btn-ghost">
+                  Back to Home
+                </a>
+                <button onClick={() => setSubmitted(false)} className="btn btn-ghost">
+                  Send Another
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+        <Footer router={router} />
       </div>
     );
   }
@@ -181,7 +232,7 @@ export default function ContactPage() {
       <Nav activePage="contact" />
       <div className="wrap" style={{ padding: "48px 24px 80px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          {/* Header */}
+          {/* Header with quick contact buttons */}
           <div style={{ marginBottom: 40 }}>
             <div className="eyebrow" style={{ marginBottom: 20 }}>
               <span className="dot" />
@@ -191,12 +242,17 @@ export default function ContactPage() {
             <p style={{ color: "var(--ash)", fontSize: 16, lineHeight: 1.5, marginBottom: 20 }}>
               Have a question or ready to start? We're here to help.
             </p>
-            {/* Quick contact buttons */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <a href={PHONE_TEL} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-                <Phone s={18} />
-                Call Us
-              </a>
+            {/* Quick contact buttons - phone and email appear ONLY here */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div>
+                <a href={PHONE_TEL} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+                  <Phone s={18} />
+                  Call Us
+                </a>
+                <p style={{ fontSize: 12, color: "var(--ash)", marginTop: 6, marginLeft: 2 }}>
+                  Or text us anytime
+                </p>
+              </div>
               <a href="mailto:mike@ignitionfitness.com" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
                 <Mail s={18} />
                 Email Us
@@ -207,7 +263,7 @@ export default function ContactPage() {
           {/* Two-column layout */}
           <style>{`
             @media (min-width: 700px) {
-              .contact-grid { grid-template-columns: 1fr 340px !important; }
+              .contact-grid { grid-template-columns: 1fr 320px !important; }
             }
           `}</style>
           <div className="contact-grid" style={{
@@ -241,7 +297,7 @@ export default function ContactPage() {
                 </div>
               )}
 
-              {/* Honeypot field - hidden from users, bots will fill it */}
+              {/* Honeypot field */}
               <div style={{
                 position: "absolute",
                 left: "-9999px",
@@ -364,8 +420,9 @@ export default function ContactPage() {
               </button>
             </form>
 
-            {/* Studio Info Panel */}
+            {/* Sidebar - Location/Hours + Book CTA only */}
             <div>
+              {/* Studio Info Panel - just location and hours (no duplicate phone/email) */}
               <div style={{
                 background: "var(--f800)", border: "1.5px solid var(--line)", borderRadius: 20,
                 padding: "28px 24px"
@@ -377,51 +434,7 @@ export default function ContactPage() {
                 }}>Studio Info</h2>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  {/* Phone */}
-                  <div style={{ display: "flex", gap: 14 }}>
-                    <div style={{
-                      width: 40, height: 40, minWidth: 40, borderRadius: 10,
-                      display: "grid", placeItems: "center",
-                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
-                    }}>
-                      <Phone s={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
-                        Phone
-                      </div>
-                      <a
-                        href={PHONE_TEL}
-                        style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none" }}
-                      >
-                        {PHONE_NUMBER}
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div style={{ display: "flex", gap: 14 }}>
-                    <div style={{
-                      width: 40, height: 40, minWidth: 40, borderRadius: 10,
-                      display: "grid", placeItems: "center",
-                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
-                    }}>
-                      <Mail s={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
-                        Email
-                      </div>
-                      <a
-                        href="mailto:mike@ignitionfitness.com"
-                        style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none" }}
-                      >
-                        mike@ignitionfitness.com
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Address */}
+                  {/* Location */}
                   <div style={{ display: "flex", gap: 14 }}>
                     <div style={{
                       width: 40, height: 40, minWidth: 40, borderRadius: 10,
@@ -464,36 +477,6 @@ export default function ContactPage() {
                 </div>
               </div>
 
-              {/* Prefer to call CTA */}
-              <div style={{
-                marginTop: 16,
-                background: "linear-gradient(150deg, rgba(224,45,36,.08), var(--f900))",
-                border: "1.5px solid var(--ember)",
-                borderRadius: 16,
-                padding: "20px 22px",
-                textAlign: "center"
-              }}>
-                <div style={{
-                  fontSize: 15, fontWeight: 600, color: "var(--bone)", marginBottom: 6
-                }}>
-                  Prefer to call or text?
-                </div>
-                <p style={{ fontSize: 13, color: "var(--ash)", marginBottom: 14, lineHeight: 1.5 }}>
-                  We're happy to chat. Give us a call or shoot us a text.
-                </p>
-                <a
-                  href={PHONE_TEL}
-                  className="btn btn-primary"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8,
-                    textDecoration: "none"
-                  }}
-                >
-                  <Phone s={16} />
-                  <span>{PHONE_NUMBER}</span>
-                </a>
-              </div>
-
               {/* Book CTA */}
               <div style={{
                 marginTop: 16,
@@ -509,7 +492,7 @@ export default function ContactPage() {
                   Skip the form and book your session directly.
                 </p>
                 <a
-                  href="/#book"
+                  href="/"
                   className="btn btn-ghost"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8,
@@ -524,38 +507,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="foot">
-        <div className="wrap">
-          <div className="foot-grid">
-            <div>
-              <button className="logo" onClick={() => router.push("/")} style={{ marginBottom: 16 }}>
-                <Logo h={44} />
-              </button>
-              <p style={{ maxWidth: "34ch" }}>Forging strength, one swing at a time. Small-group kettlebell training in Rancho Cucamonga.</p>
-            </div>
-            <div>
-              <h5>Navigate</h5>
-              <a href="/">Home</a>
-              <a href="/our-story">Our Story</a>
-              <a href="/studio">The Studio</a>
-              <a href="/#pricing">Pricing</a>
-              <a href="/contact">Contact</a>
-            </div>
-            <div>
-              <h5>Contact</h5>
-              <a href="mailto:mike@ignitionfitness.com">mike@ignitionfitness.com</a>
-              <a href="tel:9099214463">(909) 921-4463</a>
-              <p>9125 Archibald Ave, Ste D<br />Rancho Cucamonga, CA 91730</p>
-            </div>
-          </div>
-          <div className="foot-bottom">
-            <span>© {new Date().getFullYear()} Ignition Fitness. All rights reserved.</span>
-            <span>Rancho Cucamonga, CA</span>
-          </div>
-        </div>
-      </footer>
+      <Footer router={router} />
     </div>
   );
 }
