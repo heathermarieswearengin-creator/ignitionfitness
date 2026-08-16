@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { sendStandingSkipNotification } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,22 @@ export async function POST(request, { params }) {
         reason: reason || null,
       },
     });
+
+    // Send notification email to Mike
+    const member = await prisma.user.findUnique({ where: { id: standingClient.memberId } });
+    if (member) {
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      sendStandingSkipNotification({
+        memberName: member.name || member.email,
+        memberEmail: member.email,
+        date: dateObj,
+        dayName: dayNames[dow],
+        time: standingClient.startTime,
+        reason: reason || null,
+      }).catch((err) => {
+        console.error("[standing-skip] notification email failed:", err);
+      });
+    }
 
     return Response.json({ success: true, skippedDate: date });
   } catch (err) {

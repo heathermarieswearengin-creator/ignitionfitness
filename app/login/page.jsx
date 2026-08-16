@@ -35,9 +35,9 @@ function LoginForm() {
     await new Promise(r => setTimeout(r, 100));
     // Fetch user role from server with cache bypass
     const me = await fetch("/api/me", { cache: "no-store" }).then(r => r.json()).catch(() => ({}));
-    // Admin users always go to /admin
+    // Admin users always go to /admin/overview
     if (me?.user?.role === "ADMIN") {
-      window.location.href = "/admin";
+      window.location.href = "/admin/overview";
     } else {
       window.location.href = next;
     }

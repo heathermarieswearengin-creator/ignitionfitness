@@ -1,40 +1,41 @@
 // Ignition Fitness Service Worker
-// Basic caching for offline support - static assets only
+// Network-first for pages, cache for offline fallback only
 
-const CACHE_NAME = 'ignition-v1';
+// VERSION: Update this on each deployment to bust cache
+const SW_VERSION = '2024-08-16-v2';
+const CACHE_NAME = `ignition-${SW_VERSION}`;
 
-// Static assets to cache on install
-const STATIC_ASSETS = [
-  '/',
-  '/login',
-  '/signup',
-];
+// Minimal static assets for offline fallback
+const OFFLINE_FALLBACK = ['/'];
 
-// Install: cache shell assets
+// Install: cache minimal offline assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_FALLBACK))
   );
+  // Force immediate activation
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+          .filter((key) => key.startsWith('ignition-') && key !== CACHE_NAME)
+          .map((key) => {
+            console.log('[SW] Deleting old cache:', key);
+            return caches.delete(key);
+          })
       );
     })
   );
+  // Take control of all clients immediately
   self.clients.claim();
 });
 
-// Fetch: network-first for API/dynamic, cache-first for static
+// Fetch: network-first for everything, cache only for offline
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -42,22 +43,23 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip API routes, auth routes, and dynamic data - always fetch fresh
+  // Skip API routes and Next.js internals - never cache these
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.includes('_next/') ||
     url.pathname.startsWith('/reset') ||
-    url.pathname.startsWith('/forgot')
+    url.pathname.startsWith('/forgot') ||
+    url.pathname.startsWith('/admin')
   ) {
     return;
   }
 
-  // For navigation requests (HTML pages): network-first with cache fallback
+  // For navigation requests (HTML pages): ALWAYS network-first
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful responses
+          // Only cache successful responses as fallback
           if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
@@ -65,27 +67,35 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Offline: try cache
+          // Offline only: try cache, then fallback to home
           return caches.match(request).then((cached) => cached || caches.match('/'));
         })
     );
     return;
   }
 
-  // For other static assets: stale-while-revalidate
+  // For other assets (images, fonts): network-first with cache fallback
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || fetchPromise;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
+});
+
+// Listen for messages to force cache clear
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data === 'CLEAR_CACHE') {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => caches.delete(key));
+    });
+  }
 });
