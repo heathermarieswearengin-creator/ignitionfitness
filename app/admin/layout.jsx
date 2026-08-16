@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAV_ITEMS = [
   { href: "/admin/overview", label: "Overview", icon: "grid" },
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/admin/standing-clients", label: "Standing Clients", icon: "repeat" },
   { href: "/admin/members", label: "Members", icon: "users" },
   { href: "/admin/leads", label: "Leads", icon: "inbox" },
+  { href: "/admin/messages", label: "Messages", icon: "mail", hasBadge: true },
 ];
 
 function Icon({ name, size = 20 }) {
@@ -23,6 +24,7 @@ function Icon({ name, size = 20 }) {
     repeat: <><path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 014-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 01-4 4H3" /></>,
     users: <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />,
     inbox: <path d="M22 12h-6l-2 3H10l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />,
+    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
     menu: <path d="M3 12h18M3 6h18M3 18h18" />,
     x: <path d="M18 6L6 18M6 6l12 12" />,
     logout: <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />,
@@ -38,9 +40,30 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const user = session?.user;
   const isAdmin = user?.role === "ADMIN";
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/admin/messages");
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadMessages(data.unreadCount || 0);
+        }
+      } catch (e) {
+        // Silently fail
+      }
+    };
+    fetchUnread();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchUnread, 60000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   // Loading state
   if (status === "loading") {
@@ -114,6 +137,7 @@ export default function AdminLayout({ children }) {
         <nav className="adm-nav">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const showBadge = item.hasBadge && unreadMessages > 0;
             return (
               <Link
                 key={item.href}
@@ -123,6 +147,9 @@ export default function AdminLayout({ children }) {
               >
                 <Icon name={item.icon} size={18} />
                 <span>{item.label}</span>
+                {showBadge && (
+                  <span className="adm-nav-badge">{unreadMessages > 99 ? "99+" : unreadMessages}</span>
+                )}
               </Link>
             );
           })}
@@ -364,6 +391,17 @@ const adminStyles = `
     height: 20px;
     background: #c9251c;
     border-radius: 0 2px 2px 0;
+  }
+  .adm-nav-badge {
+    margin-left: auto;
+    background: #c9251c;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    min-width: 18px;
+    text-align: center;
   }
 
   /* Sidebar footer */

@@ -176,16 +176,18 @@ model PackageLog {
 }
 
 model Lead {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String?
   email     String
   phone     String?
-  source    String   @default("web") // "kb-basics" | "dropin" | "web"
-  status    String   @default("new") // "new" | "contacted" | "converted" | "dead"
+  source    String    @default("web") // "contact" | "dropin" | "web"
+  status    String    @default("new") // "new" | "contacted" | "converted" | "dead"
   notes     String?
-  createdAt DateTime @default(now())
+  readAt    DateTime? // When the message was read by admin (for contact form submissions)
+  createdAt DateTime  @default(now())
 
   @@index([email])
+  @@index([source])
 }
 
 model AvailabilityBlock {

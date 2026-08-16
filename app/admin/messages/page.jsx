@@ -1,0 +1,426 @@
+"use client";
+import { useState, useEffect } from "react";
+
+function Icon({ name, size = 20 }) {
+  const icons = {
+    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
+    check: <polyline points="20 6 9 17 4 12" />,
+    phone: <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {icons[name]}
+    </svg>
+  );
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export default function MessagesPage() {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // "all" | "unread" | "read"
+  const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch("/api/admin/messages");
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.messages || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch messages:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const res = await fetch(`/api/admin/messages/${id}`, { method: "PATCH" });
+      if (res.ok) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, readAt: new Date().toISOString() } : m))
+        );
+      }
+    } catch (e) {
+      console.error("Failed to mark as read:", e);
+    }
+  };
+
+  const handleSelect = (msg) => {
+    setSelectedId(msg.id);
+    if (!msg.readAt) {
+      markAsRead(msg.id);
+    }
+  };
+
+  const filtered = messages.filter((m) => {
+    if (filter === "unread") return !m.readAt;
+    if (filter === "read") return !!m.readAt;
+    return true;
+  });
+
+  const selected = messages.find((m) => m.id === selectedId);
+  const unreadCount = messages.filter((m) => !m.readAt).length;
+
+  return (
+    <div>
+      <style>{pageStyles}</style>
+
+      <div className="adm-page-header">
+        <h1>Messages</h1>
+        <p>Contact form submissions from your website</p>
+      </div>
+
+      {/* Filters */}
+      <div className="adm-filters">
+        <button
+          className={`adm-filter-btn ${filter === "all" ? "active" : ""}`}
+          onClick={() => setFilter("all")}
+        >
+          All ({messages.length})
+        </button>
+        <button
+          className={`adm-filter-btn ${filter === "unread" ? "active" : ""}`}
+          onClick={() => setFilter("unread")}
+        >
+          Unread ({unreadCount})
+        </button>
+        <button
+          className={`adm-filter-btn ${filter === "read" ? "active" : ""}`}
+          onClick={() => setFilter("read")}
+        >
+          Read ({messages.length - unreadCount})
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="adm-card">
+          <div className="adm-empty">
+            <div className="adm-spinner" style={{ margin: "0 auto" }} />
+            <p style={{ marginTop: 16 }}>Loading messages...</p>
+          </div>
+        </div>
+      ) : messages.length === 0 ? (
+        <div className="adm-card">
+          <div className="adm-empty">
+            <div className="adm-empty-icon">
+              <Icon name="mail" size={24} />
+            </div>
+            <p>No contact form submissions yet</p>
+          </div>
+        </div>
+      ) : (
+        <div className="msg-layout">
+          {/* Message list */}
+          <div className="msg-list">
+            {filtered.length === 0 ? (
+              <div className="msg-empty">
+                No {filter} messages
+              </div>
+            ) : (
+              filtered.map((msg) => (
+                <button
+                  key={msg.id}
+                  className={`msg-item ${!msg.readAt ? "unread" : ""} ${selectedId === msg.id ? "selected" : ""}`}
+                  onClick={() => handleSelect(msg)}
+                >
+                  <div className="msg-item-header">
+                    <span className="msg-item-name">{msg.name || "Anonymous"}</span>
+                    <span className="msg-item-time">{formatDate(msg.createdAt)}</span>
+                  </div>
+                  {msg.interest && (
+                    <div className="msg-item-interest">{msg.interest}</div>
+                  )}
+                  <div className="msg-item-preview">
+                    {msg.message?.slice(0, 80) || "(No message)"}
+                    {msg.message?.length > 80 ? "..." : ""}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Message detail */}
+          <div className="msg-detail">
+            {selected ? (
+              <>
+                <div className="msg-detail-header">
+                  <div>
+                    <h2>{selected.name || "Anonymous"}</h2>
+                    <span className="msg-detail-time">{new Date(selected.createdAt).toLocaleString()}</span>
+                  </div>
+                  {selected.readAt && (
+                    <span className="msg-read-badge">
+                      <Icon name="check" size={14} />
+                      Read
+                    </span>
+                  )}
+                </div>
+
+                <div className="msg-detail-contact">
+                  <a href={`mailto:${selected.email}`} className="msg-contact-link">
+                    {selected.email}
+                  </a>
+                  {selected.phone && (
+                    <a href={`tel:${selected.phone}`} className="msg-contact-link">
+                      <Icon name="phone" size={14} />
+                      {selected.phone}
+                    </a>
+                  )}
+                </div>
+
+                {selected.interest && (
+                  <div className="msg-detail-interest">
+                    <span className="msg-detail-label">Interested in:</span>
+                    <span>{selected.interest}</span>
+                  </div>
+                )}
+
+                <div className="msg-detail-body">
+                  <span className="msg-detail-label">Message:</span>
+                  <p>{selected.message || "(No message provided)"}</p>
+                </div>
+
+                <div className="msg-actions">
+                  <a
+                    href={`mailto:${selected.email}?subject=Re: Your inquiry to Ignition Fitness`}
+                    className="adm-btn adm-btn-primary"
+                  >
+                    Reply via Email
+                  </a>
+                  {selected.phone && (
+                    <a href={`tel:${selected.phone}`} className="adm-btn adm-btn-secondary">
+                      Call
+                    </a>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="msg-detail-empty">
+                <Icon name="mail" size={32} />
+                <p>Select a message to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const pageStyles = `
+  .msg-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+    min-height: 500px;
+  }
+
+  .msg-list {
+    background: white;
+    border: 1px solid #e7e5e4;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+
+  .msg-empty {
+    padding: 32px;
+    text-align: center;
+    color: #78716c;
+  }
+
+  .msg-item {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-bottom: 1px solid #f5f5f4;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .msg-item:hover {
+    background: #fafaf9;
+  }
+  .msg-item.selected {
+    background: #fef2f2;
+    border-left: 3px solid #c9251c;
+    padding-left: 13px;
+  }
+  .msg-item.unread {
+    background: #fffbeb;
+  }
+  .msg-item.unread.selected {
+    background: #fef2f2;
+  }
+
+  .msg-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .msg-item-name {
+    font-weight: 600;
+    color: #1c1917;
+    font-size: 14px;
+  }
+  .msg-item.unread .msg-item-name {
+    font-weight: 700;
+  }
+  .msg-item-time {
+    font-size: 12px;
+    color: #a8a29e;
+  }
+  .msg-item-interest {
+    font-size: 12px;
+    color: #c9251c;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .msg-item-preview {
+    font-size: 13px;
+    color: #78716c;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .msg-detail {
+    background: white;
+    border: 1px solid #e7e5e4;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .msg-detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #a8a29e;
+  }
+
+  .msg-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f5f5f4;
+  }
+  .msg-detail-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1c1917;
+    margin: 0 0 4px;
+  }
+  .msg-detail-time {
+    font-size: 13px;
+    color: #78716c;
+  }
+
+  .msg-read-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+  }
+
+  .msg-detail-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .msg-contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #c9251c;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .msg-contact-link:hover {
+    text-decoration: underline;
+  }
+
+  .msg-detail-interest {
+    margin-bottom: 20px;
+  }
+  .msg-detail-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #78716c;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .msg-detail-interest span:last-child {
+    font-size: 15px;
+    color: #1c1917;
+  }
+
+  .msg-detail-body {
+    flex: 1;
+    margin-bottom: 24px;
+  }
+  .msg-detail-body p {
+    font-size: 15px;
+    color: #1c1917;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+
+  .msg-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .msg-layout {
+      grid-template-columns: 1fr;
+    }
+    .msg-list {
+      max-height: 300px;
+    }
+  }
+`;
