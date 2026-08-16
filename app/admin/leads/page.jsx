@@ -1,6 +1,17 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
@@ -314,6 +325,7 @@ export default function LeadsPage() {
   const [updating, setUpdating] = useState(null);
   const [toast, setToast] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
+  const isMobile = useIsMobile();
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -404,12 +416,13 @@ export default function LeadsPage() {
       </div>
 
       <div className="adm-card">
-        <div className="adm-filters" style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 20 }}>
           {STATUS_OPTIONS.map(opt => (
             <button
               key={opt.value}
               className={`adm-filter-btn ${statusFilter === opt.value ? "active" : ""}`}
               onClick={() => setStatusFilter(opt.value)}
+              style={{ flexShrink: 0, minHeight: 44 }}
             >
               {opt.label}
               {opt.value !== "all" && (
@@ -439,7 +452,101 @@ export default function LeadsPage() {
                 : `No ${statusFilter} leads`}
             </p>
           </div>
+        ) : isMobile ? (
+          /* Mobile: Card layout */
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filtered.map(lead => (
+              <div
+                key={lead.id}
+                style={{
+                  padding: 16,
+                  background: "white",
+                  border: "1px solid #e7e5e4",
+                  borderRadius: 10,
+                  borderLeft: `4px solid ${lead.status === "new" ? "#f59e0b" : lead.status === "converted" ? "#22c55e" : lead.status === "dead" ? "#ef4444" : "#a8a29e"}`,
+                }}
+              >
+                {/* Top row: Name + Status */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c1917", marginBottom: 2 }}>
+                      {lead.name || "—"}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#78716c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {lead.email}
+                    </div>
+                  </div>
+                  <span className={`adm-badge ${STATUS_COLORS[lead.status] || "adm-badge-gray"}`} style={{ flexShrink: 0, marginLeft: 8 }}>
+                    {lead.status}
+                  </span>
+                </div>
+
+                {/* Info row */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, fontSize: 13, color: "#57534e" }}>
+                  {lead.phone && <span>{lead.phone}</span>}
+                  {lead.phone && <span style={{ color: "#a8a29e" }}>·</span>}
+                  <span className="adm-badge adm-badge-gray" style={{ fontSize: 11 }}>{lead.source}</span>
+                  <span style={{ color: "#a8a29e" }}>·</span>
+                  <span style={{ color: "#78716c" }}>{formatDate(lead.createdAt)}</span>
+                </div>
+
+                {/* Actions row */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {lead.status === "converted" ? (
+                    <span style={{ fontSize: 13, color: "#166534", fontWeight: 500 }}>✓ Converted to Member</span>
+                  ) : (
+                    <>
+                      <select
+                        value={lead.status}
+                        onChange={e => updateStatus(lead.id, e.target.value)}
+                        disabled={updating === lead.id}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 8,
+                          border: "1px solid #e7e5e4",
+                          background: updating === lead.id ? "#f5f5f4" : "white",
+                          fontSize: 14,
+                          cursor: updating === lead.id ? "wait" : "pointer",
+                          minHeight: 44,
+                        }}
+                      >
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="dead">Dead</option>
+                      </select>
+                      <button
+                        onClick={() => setConvertingLead(lead)}
+                        disabled={updating === lead.id}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 8,
+                          border: "none",
+                          background: "#c9251c",
+                          color: "white",
+                          fontSize: 14,
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          whiteSpace: "nowrap",
+                          minHeight: 44,
+                        }}
+                      >
+                        <Icon name="userPlus" size={16} />
+                        Convert
+                      </button>
+                    </>
+                  )}
+                  {updating === lead.id && (
+                    <div className="adm-spinner" style={{ width: 16, height: 16 }} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
+          /* Desktop: Table layout */
           <div style={{ overflowX: "auto" }}>
             <table className="adm-table">
               <thead>

@@ -1,6 +1,17 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function studioNow() {
   const now = new Date();
   const pacific = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
@@ -20,6 +31,7 @@ export default function AvailabilityPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const isMobile = useIsMobile();
 
   // Block form state
   const [blockForm, setBlockForm] = useState({
@@ -160,7 +172,7 @@ export default function AvailabilityPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexDirection: isMobile ? "column" : "row" }}>
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -168,8 +180,10 @@ export default function AvailabilityPage() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: isMobile ? "center" : "flex-start",
               gap: 8,
               padding: "12px 20px",
+              minHeight: 44,
               background: activeTab === tab.id ? "#1c1917" : "white",
               color: activeTab === tab.id ? "white" : "#57534e",
               border: activeTab === tab.id ? "none" : "1px solid #e7e5e4",
@@ -178,6 +192,7 @@ export default function AvailabilityPage() {
               fontWeight: 600,
               cursor: "pointer",
               transition: "all 0.15s",
+              flex: isMobile ? "none" : undefined,
             }}
           >
             <span>{tab.icon}</span>
@@ -233,7 +248,7 @@ export default function AvailabilityPage() {
       )}
 
       {activeTab === "block" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
           {/* Block form */}
           <div className="adm-card">
             <h2 className="adm-card-title" style={{ marginBottom: 20 }}>Block Time Off</h2>
@@ -248,6 +263,7 @@ export default function AvailabilityPage() {
                     style={{
                       flex: 1,
                       padding: "10px 16px",
+                      minHeight: 44,
                       background: !blockForm.isRange ? "#1c1917" : "white",
                       color: !blockForm.isRange ? "white" : "#57534e",
                       border: !blockForm.isRange ? "none" : "1px solid #e7e5e4",
@@ -265,6 +281,7 @@ export default function AvailabilityPage() {
                     style={{
                       flex: 1,
                       padding: "10px 16px",
+                      minHeight: 44,
                       background: blockForm.isRange ? "#1c1917" : "white",
                       color: blockForm.isRange ? "white" : "#57534e",
                       border: blockForm.isRange ? "none" : "1px solid #e7e5e4",
@@ -431,7 +448,7 @@ export default function AvailabilityPage() {
       )}
 
       {activeTab === "extra" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
           {/* Extra availability form */}
           <div className="adm-card">
             <h2 className="adm-card-title" style={{ marginBottom: 8 }}>Add Extra Availability</h2>
@@ -465,13 +482,14 @@ export default function AvailabilityPage() {
 
               <div className="adm-field">
                 <label className="adm-label">Session Type</label>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexDirection: isMobile ? "column" : "row" }}>
                   <button
                     type="button"
                     onClick={() => setExtraForm({ ...extraForm, type: "PT", capacity: 1 })}
                     style={{
                       flex: 1,
                       padding: "12px 16px",
+                      minHeight: 44,
                       background: extraForm.type === "PT" ? "#1c1917" : "white",
                       color: extraForm.type === "PT" ? "white" : "#57534e",
                       border: extraForm.type === "PT" ? "none" : "1px solid #e7e5e4",
@@ -489,6 +507,7 @@ export default function AvailabilityPage() {
                     style={{
                       flex: 1,
                       padding: "12px 16px",
+                      minHeight: 44,
                       background: extraForm.type === "GROUP" ? "#1c1917" : "white",
                       color: extraForm.type === "GROUP" ? "white" : "#57534e",
                       border: extraForm.type === "GROUP" ? "none" : "1px solid #e7e5e4",
@@ -644,13 +663,6 @@ export default function AvailabilityPage() {
         </div>
       )}
 
-      <style>{`
-        @media (max-width: 800px) {
-          div[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

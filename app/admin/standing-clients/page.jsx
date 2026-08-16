@@ -1,6 +1,17 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_OPTIONS = [
   { value: 1, label: "Mon" },
@@ -70,6 +81,7 @@ export default function StandingClientsPage() {
   // Delete confirmation
   const [deletingClient, setDeletingClient] = useState(null);
 
+  const isMobile = useIsMobile();
   const today = studioNow();
 
   const loadData = useCallback(async () => {
@@ -259,7 +271,7 @@ export default function StandingClientsPage() {
         <p>Manage recurring weekly 1:1 appointments</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
         {/* Add Form */}
         <div className="adm-card">
           <h2 className="adm-card-title" style={{ marginBottom: 20 }}>Add Standing Client</h2>
@@ -373,14 +385,15 @@ export default function StandingClientsPage() {
             {/* Days of Week */}
             <div className="adm-field">
               <label className="adm-label">Days</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(7, 1fr)", gap: 6 }}>
                 {DAY_OPTIONS.map((d) => (
                   <button
                     key={d.value}
                     type="button"
                     onClick={() => toggleDay(d.value)}
                     style={{
-                      padding: "8px 14px",
+                      padding: isMobile ? "12px 8px" : "8px 14px",
+                      minHeight: 44,
                       border: "1.5px solid",
                       borderColor: form.daysOfWeek.includes(d.value) ? "#e02d24" : "#d6d3d1",
                       borderRadius: 8,
@@ -1015,7 +1028,7 @@ export default function StandingClientsPage() {
 
             <div className="adm-field">
               <label className="adm-label">Days</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                 {DAY_OPTIONS.map((d) => (
                   <button
                     key={d.value}
@@ -1029,7 +1042,8 @@ export default function StandingClientsPage() {
                       }))
                     }
                     style={{
-                      padding: "8px 14px",
+                      padding: "12px 8px",
+                      minHeight: 44,
                       border: "1.5px solid",
                       borderColor: editForm.daysOfWeek.includes(d.value) ? "#e02d24" : "#d6d3d1",
                       borderRadius: 8,
@@ -1101,13 +1115,6 @@ export default function StandingClientsPage() {
         </div>
       )}
 
-      <style>{`
-        @media (max-width: 800px) {
-          div[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,6 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function Icon({ name, size = 20 }) {
   const icons = {
     mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
@@ -35,6 +46,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // "all" | "unread" | "read"
   const [selectedId, setSelectedId] = useState(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchMessages();
@@ -109,29 +121,32 @@ export default function MessagesPage() {
       </div>
 
       {/* Filters */}
-      <div className="msg-toolbar">
-        <div className="adm-filters">
+      <div className="msg-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
           <button
             className={`adm-filter-btn ${filter === "all" ? "active" : ""}`}
             onClick={() => setFilter("all")}
+            style={{ flexShrink: 0 }}
           >
             All ({messages.length})
           </button>
           <button
             className={`adm-filter-btn ${filter === "unread" ? "active" : ""}`}
             onClick={() => setFilter("unread")}
+            style={{ flexShrink: 0 }}
           >
             Unread ({unreadCount})
           </button>
           <button
             className={`adm-filter-btn ${filter === "read" ? "active" : ""}`}
             onClick={() => setFilter("read")}
+            style={{ flexShrink: 0 }}
           >
             Read ({messages.length - unreadCount})
           </button>
         </div>
         {unreadCount > 0 && (
-          <button className="msg-mark-all-btn" onClick={markAllAsRead}>
+          <button className="msg-mark-all-btn" onClick={markAllAsRead} style={{ flexShrink: 0, minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "white", border: "1px solid #e7e5e4", borderRadius: 8, fontSize: 13, fontWeight: 500, color: "#57534e", cursor: "pointer" }}>
             <Icon name="checkCircle" size={16} />
             Mark all as read
           </button>
@@ -154,7 +169,121 @@ export default function MessagesPage() {
             <p>No contact form submissions yet</p>
           </div>
         </div>
+      ) : isMobile ? (
+        /* Mobile: Full-screen detail view when message selected */
+        selected ? (
+          <div className="adm-card" style={{ padding: 0 }}>
+            {/* Mobile back button */}
+            <button
+              onClick={() => setSelectedId(null)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "14px 16px",
+                background: "#fafaf9",
+                border: "none",
+                borderBottom: "1px solid #e7e5e4",
+                width: "100%",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#c9251c",
+                cursor: "pointer",
+              }}
+            >
+              ← Back to messages
+            </button>
+            <div style={{ padding: 20 }}>
+              <div className="msg-detail-header" style={{ borderBottom: "1px solid #f5f5f4", paddingBottom: 16, marginBottom: 16 }}>
+                <div>
+                  <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1c1917", margin: "0 0 4px" }}>{selected.name || "Anonymous"}</h2>
+                  <span style={{ fontSize: 13, color: "#78716c" }}>{new Date(selected.createdAt).toLocaleString()}</span>
+                </div>
+                {selected.readAt && (
+                  <span className="msg-read-badge">
+                    <Icon name="check" size={14} />
+                    Read
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                <a href={`mailto:${selected.email}`} style={{ color: "#c9251c", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
+                  {selected.email}
+                </a>
+                {selected.phone && (
+                  <a href={`tel:${selected.phone}`} style={{ display: "flex", alignItems: "center", gap: 6, color: "#c9251c", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
+                    <Icon name="phone" size={14} />
+                    {selected.phone}
+                  </a>
+                )}
+              </div>
+
+              {selected.interest && (
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#78716c", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Interested in:</span>
+                  <span style={{ fontSize: 15, color: "#1c1917" }}>{selected.interest}</span>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 24 }}>
+                <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#78716c", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Message:</span>
+                <p style={{ fontSize: 15, color: "#1c1917", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{selected.message || "(No message provided)"}</p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <a
+                  href={`mailto:${selected.email}?subject=Re: Your inquiry to Ignition Fitness`}
+                  className="adm-btn adm-btn-primary"
+                  style={{ textAlign: "center", textDecoration: "none", minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  Reply via Email
+                </a>
+                {selected.phone && (
+                  <a href={`tel:${selected.phone}`} className="adm-btn adm-btn-secondary" style={{ textAlign: "center", textDecoration: "none", minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    Call
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Mobile: Message list */
+          <div className="adm-card" style={{ padding: 0 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center", color: "#78716c" }}>
+                No {filter} messages
+              </div>
+            ) : (
+              filtered.map((msg) => (
+                <div
+                  key={msg.id}
+                  onClick={() => handleSelect(msg)}
+                  style={{
+                    padding: 16,
+                    borderBottom: "1px solid #f5f5f4",
+                    background: !msg.readAt ? "#fffbeb" : "white",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontWeight: !msg.readAt ? 700 : 600, color: "#1c1917", fontSize: 14 }}>{msg.name || "Anonymous"}</span>
+                    <span style={{ fontSize: 12, color: "#a8a29e" }}>{formatDate(msg.createdAt)}</span>
+                  </div>
+                  {msg.interest && (
+                    <div style={{ fontSize: 12, color: "#c9251c", fontWeight: 500, marginBottom: 4 }}>{msg.interest}</div>
+                  )}
+                  <div style={{ fontSize: 13, color: "#78716c", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {msg.message?.slice(0, 60) || "(No message)"}
+                    {msg.message?.length > 60 ? "..." : ""}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )
       ) : (
+        /* Desktop: Two-column layout */
         <div className="msg-layout">
           {/* Message list */}
           <div className="msg-list">
@@ -508,14 +637,5 @@ const pageStyles = `
   .msg-actions {
     display: flex;
     gap: 12px;
-  }
-
-  @media (max-width: 900px) {
-    .msg-layout {
-      grid-template-columns: 1fr;
-    }
-    .msg-list {
-      max-height: 300px;
-    }
   }
 `;
