@@ -11,6 +11,7 @@ export default function MembersPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleteEmailInput, setDeleteEmailInput] = useState("");
   const [menuOpen, setMenuOpen] = useState(null);
   const menuRef = useRef(null);
 
@@ -363,7 +364,8 @@ export default function MembersPage() {
                               <button
                                 onClick={() => {
                                   setMenuOpen(null);
-                                  setConfirmDelete({ id: member.id, name: memberDetail.name });
+                                  setDeleteEmailInput("");
+                                  setConfirmDelete({ id: member.id, name: memberDetail.name, email: memberDetail.email });
                                 }}
                                 style={{
                                   width: "100%",
@@ -505,7 +507,7 @@ export default function MembersPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - Type email to confirm */}
       {confirmDelete && (
         <div style={{
           position: "fixed",
@@ -516,27 +518,85 @@ export default function MembersPage() {
           justifyContent: "center",
           zIndex: 1000,
           padding: 16,
-        }} onClick={() => { setConfirmDelete(null); setError(null); }}>
+        }} onClick={() => { setConfirmDelete(null); setDeleteEmailInput(""); setError(null); }}>
           <div
             className="adm-card"
-            style={{ maxWidth: 400, width: "100%" }}
+            style={{ maxWidth: 440, width: "100%" }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ marginBottom: 12, fontSize: 18, color: "#991b1b" }}>
-              Delete {confirmDelete.name}?
-            </h3>
-            <p style={{ color: "#78716c", marginBottom: 20, fontSize: 14, lineHeight: 1.6 }}>
-              This permanently removes their account and cannot be undone. Members with booking history cannot be deleted — archive them instead.
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: "#fef2f2", color: "#991b1b",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, color: "#991b1b" }}>
+                Permanently Delete Member
+              </h3>
+            </div>
+
+            <div style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              padding: 14,
+              marginBottom: 16,
+              fontSize: 14,
+              color: "#991b1b",
+              lineHeight: 1.5
+            }}>
+              <strong>This will permanently delete:</strong>
+              <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+                <li>The member account for <strong>{confirmDelete.name}</strong></li>
+                <li>All their booking history (past, upcoming, cancelled)</li>
+                <li>Any upcoming bookings will free their reserved slots</li>
+              </ul>
+              <div style={{ marginTop: 10, fontWeight: 600 }}>
+                This cannot be undone.
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{
+                display: "block",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#44403c",
+                marginBottom: 6
+              }}>
+                Type <strong style={{ fontFamily: "monospace", background: "#f5f5f4", padding: "2px 6px", borderRadius: 4 }}>{confirmDelete.email}</strong> to confirm:
+              </label>
+              <input
+                type="email"
+                value={deleteEmailInput}
+                onChange={e => setDeleteEmailInput(e.target.value)}
+                placeholder="member@example.com"
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #e7e5e4",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: "monospace",
+                }}
+              />
+            </div>
+
             {error && (
               <div style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b", marginBottom: 16, fontSize: 14 }}>
                 {error}
               </div>
             )}
+
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button
                 className="adm-btn adm-btn-secondary"
-                onClick={() => { setConfirmDelete(null); setError(null); }}
+                onClick={() => { setConfirmDelete(null); setDeleteEmailInput(""); setError(null); }}
                 style={{ minHeight: 40 }}
               >
                 Cancel
@@ -544,15 +604,16 @@ export default function MembersPage() {
               <button
                 className="adm-btn"
                 onClick={() => deleteMember(confirmDelete.id)}
-                disabled={busy}
+                disabled={busy || deleteEmailInput.toLowerCase() !== confirmDelete.email.toLowerCase()}
                 style={{
                   minHeight: 40,
-                  background: "#991b1b",
+                  background: deleteEmailInput.toLowerCase() === confirmDelete.email.toLowerCase() ? "#991b1b" : "#d1d5db",
                   color: "white",
-                  border: "none"
+                  border: "none",
+                  cursor: deleteEmailInput.toLowerCase() === confirmDelete.email.toLowerCase() ? "pointer" : "not-allowed",
                 }}
               >
-                {busy ? "Deleting..." : "Delete permanently"}
+                {busy ? "Deleting..." : "Delete Permanently"}
               </button>
             </div>
           </div>

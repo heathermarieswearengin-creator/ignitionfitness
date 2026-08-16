@@ -83,22 +83,40 @@ export async function DELETE(_request, { params }) {
     await requireAdmin();
     const prisma = getPrisma();
     const { id } = await params;
+    const today = studioNow().isoDay;
 
     const member = await prisma.user.findUnique({
       where: { id },
-      include: { _count: { select: { bookings: true } } },
+      include: {
+        bookings: {
+          include: { session: true },
+        },
+      },
     });
     if (!member) throw new HttpError(404, "Member not found");
     if (member.role === "ADMIN") throw new HttpError(400, "Cannot delete admin users");
 
-    // Block deletion if member has any booking history - require archive instead
-    if (member._count.bookings > 0) {
-      throw new HttpError(400, "Cannot delete member with booking history. Archive them instead.");
-    }
+    // Find upcoming confirmed bookings that need their slots freed
+    const upcomingConfirmed = member.bookings.filter(b =>
+      b.status === "confirmed" &&
+      b.session &&
+      b.session.date >= today
+    );
 
+    // Delete all bookings first (foreign key constraint)
+    await prisma.booking.deleteMany({ where: { userId: id } });
+
+    // Delete any password reset tokens
+    await prisma.passwordResetToken.deleteMany({ where: { userId: id } });
+
+    // Delete the user
     await prisma.user.delete({ where: { id } });
 
-    return Response.json({ success: true });
+    return Response.json({
+      success: true,
+      deletedBookings: member.bookings.length,
+      freedSlots: upcomingConfirmed.length,
+    });
   } catch (err) {
     return jsonError(err);
   }

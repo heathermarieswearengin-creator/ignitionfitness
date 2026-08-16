@@ -85,7 +85,7 @@ function Footer({ router }) {
         </div>
         <div className="foot-bottom">
           <span>© {new Date().getFullYear()} Ignition Fitness. All rights reserved.</span>
-          <span>Rancho Cucamonga, CA</span>
+          <span><a href="/privacy" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>Privacy Policy</a></span>
         </div>
       </div>
     </footer>

@@ -1850,7 +1850,7 @@ function Footer({ go }) {
           <p>9125 Archibald Ave, Ste D<br />Rancho Cucamonga, CA 91730</p>
         </div>
       </div>
-      <div className="foot-bottom"><span>© 2026 Ignition Fitness</span><span>FORGE · SWING · REPEAT</span></div>
+      <div className="foot-bottom"><span>© {new Date().getFullYear()} Ignition Fitness</span><span><a href="/privacy" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>Privacy Policy</a></span></div>
     </div></footer>
   );
 }
