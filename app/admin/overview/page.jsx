@@ -1,5 +1,20 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+
+function Icon({ name, size = 20 }) {
+  const icons = {
+    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
+    inbox: <path d="M22 12h-6l-2 3H10l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />,
+    check: <polyline points="20 6 9 17 4 12" />,
+    arrowRight: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {icons[name]}
+    </svg>
+  );
+}
 
 function studioNow() {
   const now = new Date();
@@ -16,22 +31,30 @@ export default function OverviewPage() {
   const [bookings, setBookings] = useState([]);
   const [todaySlots, setTodaySlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [newLeads, setNewLeads] = useState(0);
 
   const today = studioNow().isoDay;
   const weekEnd = iso(new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86400000));
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [b, s] = await Promise.all([
+    const [b, s, msgData, leadsData] = await Promise.all([
       fetch("/api/admin/bookings").then(r => r.ok ? r.json() : []).catch(() => []),
       fetch(`/api/availability?from=${today}&to=${today}&includePast=true`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/admin/messages").then(r => r.ok ? r.json() : { unreadCount: 0 }).catch(() => ({ unreadCount: 0 })),
+      fetch("/api/admin/leads").then(r => r.ok ? r.json() : []).catch(() => []),
     ]);
     setBookings(b);
     setTodaySlots(s);
+    setUnreadMessages(msgData.unreadCount || 0);
+    setNewLeads(Array.isArray(leadsData) ? leadsData.filter(l => l.status === "new").length : 0);
     setLoading(false);
   }, [today]);
 
   useEffect(() => { load(); }, [load]);
+
+  const needsAttention = unreadMessages > 0 || newLeads > 0;
 
   const active = bookings.filter(b => b.status !== "cancelled");
   const todays = active.filter(b => b.date === today);
@@ -60,6 +83,49 @@ export default function OverviewPage() {
         </div>
       ) : (
         <>
+          {/* Needs Your Attention Section */}
+          <div className="attn-section">
+            <h2 className="attn-title">Needs Your Attention</h2>
+            {needsAttention ? (
+              <div className="attn-cards">
+                {unreadMessages > 0 && (
+                  <Link href="/admin/messages" className="attn-card">
+                    <div className="attn-icon attn-icon-messages">
+                      <Icon name="mail" size={20} />
+                    </div>
+                    <div className="attn-content">
+                      <span className="attn-count">{unreadMessages}</span>
+                      <span className="attn-label">new {unreadMessages === 1 ? "message" : "messages"}</span>
+                    </div>
+                    <Icon name="arrowRight" size={18} />
+                  </Link>
+                )}
+                {newLeads > 0 && (
+                  <Link href="/admin/leads" className="attn-card">
+                    <div className="attn-icon attn-icon-leads">
+                      <Icon name="inbox" size={20} />
+                    </div>
+                    <div className="attn-content">
+                      <span className="attn-count">{newLeads}</span>
+                      <span className="attn-label">new {newLeads === 1 ? "lead" : "leads"}</span>
+                    </div>
+                    <Icon name="arrowRight" size={18} />
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="attn-clear">
+                <div className="attn-clear-icon">
+                  <Icon name="check" size={24} />
+                </div>
+                <div className="attn-clear-text">
+                  <span className="attn-clear-title">All caught up!</span>
+                  <span className="attn-clear-sub">No new messages or leads to review</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="adm-stats">
             <div className="adm-stat highlight">
               <div className="adm-stat-label">Booked Today</div>
@@ -165,10 +231,120 @@ export default function OverviewPage() {
       )}
 
       <style>{`
+        .attn-section {
+          margin-bottom: 24px;
+        }
+        .attn-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #78716c;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin: 0 0 12px;
+        }
+        .attn-cards {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .attn-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 20px;
+          background: white;
+          border: 1px solid #e7e5e4;
+          border-radius: 12px;
+          text-decoration: none;
+          transition: all 0.15s;
+          flex: 1;
+          min-width: 200px;
+        }
+        .attn-card:hover {
+          border-color: #c9251c;
+          box-shadow: 0 2px 8px rgba(201, 37, 28, 0.1);
+        }
+        .attn-card:hover svg:last-child {
+          transform: translateX(4px);
+        }
+        .attn-card svg:last-child {
+          color: #a8a29e;
+          transition: transform 0.15s;
+          margin-left: auto;
+        }
+        .attn-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .attn-icon-messages {
+          background: #fef2f2;
+          color: #c9251c;
+        }
+        .attn-icon-leads {
+          background: #fef9c3;
+          color: #854d0e;
+        }
+        .attn-content {
+          display: flex;
+          flex-direction: column;
+        }
+        .attn-count {
+          font-size: 24px;
+          font-weight: 700;
+          color: #1c1917;
+          line-height: 1;
+        }
+        .attn-label {
+          font-size: 14px;
+          color: #78716c;
+          margin-top: 2px;
+        }
+        .attn-clear {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 20px 24px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 12px;
+        }
+        .attn-clear-icon {
+          width: 44px;
+          height: 44px;
+          background: #dcfce7;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #166534;
+        }
+        .attn-clear-text {
+          display: flex;
+          flex-direction: column;
+        }
+        .attn-clear-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #166534;
+        }
+        .attn-clear-sub {
+          font-size: 14px;
+          color: #15803d;
+        }
         @media (max-width: 900px) {
           .adm-card + .adm-card { margin-top: 0; }
           div[style*="grid-template-columns: 1fr 1fr"] {
             grid-template-columns: 1fr !important;
+          }
+          .attn-cards {
+            flex-direction: column;
+          }
+          .attn-card {
+            min-width: 0;
           }
         }
       `}</style>

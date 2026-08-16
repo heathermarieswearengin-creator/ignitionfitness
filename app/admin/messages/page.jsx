@@ -5,6 +5,7 @@ function Icon({ name, size = 20 }) {
   const icons = {
     mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
     check: <polyline points="20 6 9 17 4 12" />,
+    checkCircle: <><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>,
     phone: <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />,
   };
   return (
@@ -53,7 +54,10 @@ export default function MessagesPage() {
     }
   };
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (id, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
     try {
       const res = await fetch(`/api/admin/messages/${id}`, { method: "PATCH" });
       if (res.ok) {
@@ -63,6 +67,19 @@ export default function MessagesPage() {
       }
     } catch (e) {
       console.error("Failed to mark as read:", e);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const res = await fetch("/api/admin/messages/mark-all-read", { method: "POST" });
+      if (res.ok) {
+        setMessages((prev) =>
+          prev.map((m) => m.readAt ? m : { ...m, readAt: new Date().toISOString() })
+        );
+      }
+    } catch (e) {
+      console.error("Failed to mark all as read:", e);
     }
   };
 
@@ -92,25 +109,33 @@ export default function MessagesPage() {
       </div>
 
       {/* Filters */}
-      <div className="adm-filters">
-        <button
-          className={`adm-filter-btn ${filter === "all" ? "active" : ""}`}
-          onClick={() => setFilter("all")}
-        >
-          All ({messages.length})
-        </button>
-        <button
-          className={`adm-filter-btn ${filter === "unread" ? "active" : ""}`}
-          onClick={() => setFilter("unread")}
-        >
-          Unread ({unreadCount})
-        </button>
-        <button
-          className={`adm-filter-btn ${filter === "read" ? "active" : ""}`}
-          onClick={() => setFilter("read")}
-        >
-          Read ({messages.length - unreadCount})
-        </button>
+      <div className="msg-toolbar">
+        <div className="adm-filters">
+          <button
+            className={`adm-filter-btn ${filter === "all" ? "active" : ""}`}
+            onClick={() => setFilter("all")}
+          >
+            All ({messages.length})
+          </button>
+          <button
+            className={`adm-filter-btn ${filter === "unread" ? "active" : ""}`}
+            onClick={() => setFilter("unread")}
+          >
+            Unread ({unreadCount})
+          </button>
+          <button
+            className={`adm-filter-btn ${filter === "read" ? "active" : ""}`}
+            onClick={() => setFilter("read")}
+          >
+            Read ({messages.length - unreadCount})
+          </button>
+        </div>
+        {unreadCount > 0 && (
+          <button className="msg-mark-all-btn" onClick={markAllAsRead}>
+            <Icon name="checkCircle" size={16} />
+            Mark all as read
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -139,14 +164,25 @@ export default function MessagesPage() {
               </div>
             ) : (
               filtered.map((msg) => (
-                <button
+                <div
                   key={msg.id}
                   className={`msg-item ${!msg.readAt ? "unread" : ""} ${selectedId === msg.id ? "selected" : ""}`}
                   onClick={() => handleSelect(msg)}
                 >
                   <div className="msg-item-header">
                     <span className="msg-item-name">{msg.name || "Anonymous"}</span>
-                    <span className="msg-item-time">{formatDate(msg.createdAt)}</span>
+                    <div className="msg-item-actions">
+                      {!msg.readAt && (
+                        <button
+                          className="msg-mark-read-btn"
+                          onClick={(e) => markAsRead(msg.id, e)}
+                          title="Mark as read"
+                        >
+                          <Icon name="check" size={14} />
+                        </button>
+                      )}
+                      <span className="msg-item-time">{formatDate(msg.createdAt)}</span>
+                    </div>
                   </div>
                   {msg.interest && (
                     <div className="msg-item-interest">{msg.interest}</div>
@@ -155,7 +191,7 @@ export default function MessagesPage() {
                     {msg.message?.slice(0, 80) || "(No message)"}
                     {msg.message?.length > 80 ? "..." : ""}
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -229,6 +265,37 @@ export default function MessagesPage() {
 }
 
 const pageStyles = `
+  .msg-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .msg-toolbar .adm-filters {
+    margin-bottom: 0;
+  }
+  .msg-mark-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #e7e5e4;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #57534e;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .msg-mark-all-btn:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
   .msg-layout {
     display: grid;
     grid-template-columns: 360px 1fr;
@@ -282,7 +349,7 @@ const pageStyles = `
   .msg-item-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     margin-bottom: 4px;
   }
   .msg-item-name {
@@ -293,9 +360,37 @@ const pageStyles = `
   .msg-item.unread .msg-item-name {
     font-weight: 700;
   }
+  .msg-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .msg-item-time {
     font-size: 12px;
     color: #a8a29e;
+  }
+  .msg-mark-read-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid #d6d3d1;
+    border-radius: 4px;
+    color: #78716c;
+    cursor: pointer;
+    transition: all 0.15s;
+    opacity: 0;
+  }
+  .msg-item:hover .msg-mark-read-btn {
+    opacity: 1;
+  }
+  .msg-mark-read-btn:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
   }
   .msg-item-interest {
     font-size: 12px;
