@@ -92,6 +92,15 @@ export default function App() {
 
   const [view, setView] = useState("home");
 
+  // Handle #book hash navigation from other pages
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#book") {
+      setView("book");
+      // Clear hash so back button works naturally
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   // The server owns the id, ref and capacity check, so the created booking is
   // returned to the caller rather than invented in the browser. Accepts either
   // the single-booking shape or { items: [...] } for the cart.

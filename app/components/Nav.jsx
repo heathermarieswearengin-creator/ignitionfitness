@@ -37,7 +37,7 @@ export function Nav({ activePage }) {
             ) : (
               <a className="nlink" href="/login">SIGN IN</a>
             )}
-            <button className="btn btn-primary" onClick={() => router.push("/")} style={{ marginLeft: 8 }}>Book a Class</button>
+            <button className="btn btn-primary" onClick={() => router.push("/#book")} style={{ marginLeft: 8 }}>Book a Class</button>
           </div>
           <button className="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
             {mobileOpen ? (
@@ -60,7 +60,7 @@ export function Nav({ activePage }) {
         {user
           ? <button className="nlink" onClick={() => { signOut({ callbackUrl: "/" }); closeMobile(); }}>SIGN OUT</button>
           : <a className="nlink" href="/login" onClick={closeMobile}>SIGN IN</a>}
-        <a className="btn btn-primary" href="/" style={{ marginTop: 12, width: "100%", textAlign: "center" }}>Book a Class</a>
+        <a className="btn btn-primary" href="/#book" style={{ marginTop: 12, width: "100%", textAlign: "center" }}>Book a Class</a>
       </div>
     </>
   );

@@ -200,7 +200,7 @@ export default function ContactPage() {
 
               {/* Primary action - Book a Session */}
               <div style={{ marginBottom: 20 }}>
-                <a href="/" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+                <a href="/#book" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
                   Book a Session
                   <ArrowRight s={14} />
                 </a>
@@ -492,7 +492,7 @@ export default function ContactPage() {
                   Skip the form and book your session directly.
                 </p>
                 <a
-                  href="/"
+                  href="/#book"
                   className="btn btn-ghost"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8,
