@@ -1,11 +1,10 @@
 "use client";
 import React from "react";
-import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Theme } from "@/app/theme";
 import { PageHeader } from "@/app/components/PageHeader";
+import { Nav } from "@/app/components/Nav";
 
-// Logo - use the actual file from public/images
 function Logo({ h = 44 }) {
   return <img src="/images/logo.png" alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
 }
@@ -18,37 +17,12 @@ const Bell = ({ s = 22 }) => (
 );
 
 export default function OurStoryPage() {
-  const { data: session } = useSession();
-  const user = session?.user ?? null;
   const router = useRouter();
 
   return (
     <div className="ign">
       <Theme />
-
-      {/* Nav - matching homepage exactly */}
-      <nav className="nav">
-        <div className="wrap nav-in">
-          <button className="logo" onClick={() => router.push("/")}>
-            <Logo h={52} />
-          </button>
-          <div className="nav-links">
-            <button className="nlink" onClick={() => router.push("/")}>HOME</button>
-            <button className="nlink on">OUR STORY</button>
-            <button className="nlink" onClick={() => router.push("/studio")}>THE STUDIO</button>
-            <button className="nlink" onClick={() => router.push("/#pricing")}>PRICING</button>
-            {user ? (
-              <>
-                <button className="nlink" onClick={() => router.push("/sessions")}>MY SESSIONS</button>
-                <button className="nlink" onClick={() => signOut({ callbackUrl: "/" })}>SIGN OUT</button>
-              </>
-            ) : (
-              <a className="nlink" href="/login">SIGN IN</a>
-            )}
-            <button className="btn btn-primary" onClick={() => router.push("/")} style={{ marginLeft: 8 }}>Book a Class</button>
-          </div>
-        </div>
-      </nav>
+      <Nav activePage="our-story" />
 
       {/* Page Header */}
       <PageHeader

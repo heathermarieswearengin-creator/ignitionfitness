@@ -1,46 +1,21 @@
 "use client";
 import React from "react";
-import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Theme } from "@/app/theme";
 import { PageHeader } from "@/app/components/PageHeader";
+import { Nav } from "@/app/components/Nav";
 
 function Logo({ h = 44 }) {
   return <img src="/images/logo.png" alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
 }
 
 export default function StudioPage() {
-  const { data: session } = useSession();
-  const user = session?.user ?? null;
   const router = useRouter();
 
   return (
     <div className="ign">
       <Theme />
-
-      {/* Nav */}
-      <nav className="nav">
-        <div className="wrap nav-in">
-          <button className="logo" onClick={() => router.push("/")}>
-            <Logo h={52} />
-          </button>
-          <div className="nav-links">
-            <button className="nlink" onClick={() => router.push("/")}>HOME</button>
-            <button className="nlink" onClick={() => router.push("/our-story")}>OUR STORY</button>
-            <button className="nlink on">THE STUDIO</button>
-            <button className="nlink" onClick={() => router.push("/#pricing")}>PRICING</button>
-            {user ? (
-              <>
-                <button className="nlink" onClick={() => router.push("/sessions")}>MY SESSIONS</button>
-                <button className="nlink" onClick={() => signOut({ callbackUrl: "/" })}>SIGN OUT</button>
-              </>
-            ) : (
-              <a className="nlink" href="/login">SIGN IN</a>
-            )}
-            <button className="btn btn-primary" onClick={() => router.push("/")} style={{ marginLeft: 8 }}>Book a Class</button>
-          </div>
-        </div>
-      </nav>
+      <Nav activePage="studio" />
 
       {/* Page Header */}
       <PageHeader
@@ -49,36 +24,36 @@ export default function StudioPage() {
         subtitle="9,000 sq ft of dedicated kettlebell training space in Rancho Cucamonga."
       />
 
-      {/* Gallery - using explicit inline styles to ensure sizing works */}
+      {/* Gallery */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           {/* Top row - exterior shots */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
-            <div style={{ height: 380, borderRadius: 14, overflow: "hidden" }}>
-              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <div className="studio-grid-top">
+            <div className="studio-img studio-img-lg">
+              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" />
             </div>
-            <div style={{ height: 380, borderRadius: 14, overflow: "hidden" }}>
-              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div className="studio-img studio-img-sm">
+              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" />
             </div>
           </div>
 
           {/* Interior grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 14, marginBottom: 40 }}>
-            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
-              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <div className="studio-grid-main">
+            <div className="studio-img studio-img-wide">
+              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" />
             </div>
-            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
-              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div className="studio-img studio-img-med">
+              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" />
             </div>
-            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
-              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div className="studio-img studio-img-med">
+              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" />
             </div>
           </div>
 
           {/* CTA with detail image */}
-          <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
-            <div style={{ width: 260, height: 220, borderRadius: 14, overflow: "hidden", flexShrink: 0 }}>
-              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <div className="studio-cta-row">
+            <div className="studio-img studio-img-detail">
+              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" />
             </div>
             <div className="band">
               <div className="hero-glow2" />
