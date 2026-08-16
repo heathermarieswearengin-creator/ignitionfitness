@@ -1490,9 +1490,11 @@ function Booking({ addBooking, go, user }) {
           </div>
         )}
 
-        <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 20 }}>
-          Payment is handled in person. Cancel free up to 12 hours before.
-        </p>
+        {!user && (
+          <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 20 }}>
+            Payment is handled in person.
+          </p>
+        )}
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
           <button className="btn btn-ghost" onClick={() => go("home")}>Back Home</button>
@@ -1781,7 +1783,7 @@ function Booking({ addBooking, go, user }) {
                     {!user && <div className="srow total"><span className="k">Total due at studio</span><span className="v">${totalPrice}</span></div>}
                   </div>
                 )}
-                <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
+                {!user && <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person.</p>}
               </>
             );
           })()}
