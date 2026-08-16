@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Theme } from "@/app/theme";
@@ -17,6 +17,17 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  // Bot protection
+  const [honeypot, setHoneypot] = useState("");
+  const [timingToken, setTimingToken] = useState("");
+
+  useEffect(() => {
+    const timestamp = Date.now();
+    const secretNum = 42 * 100;
+    const obfuscated = timestamp ^ secretNum;
+    setTimingToken(btoa(`${obfuscated}.${timestamp % 1000}`));
+  }, []);
+
   const valid =
     form.name.trim() && /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 8;
 
@@ -28,7 +39,11 @@ export default function SignupPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          website: honeypot,
+          _t: timingToken,
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Could not create that account.");
@@ -60,6 +75,10 @@ export default function SignupPage() {
         <div className="glock"><Bell /></div>
         <h2>Create Account</h2>
         <p>Book multiple sessions at once and keep track of your training.</p>
+        {/* Honeypot field */}
+        <div style={{ position: "absolute", left: "-9999px", opacity: 0, pointerEvents: "none", height: 0, overflow: "hidden" }} aria-hidden="true">
+          <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" />
+        </div>
         <div className="field">
           <input value={form.name} placeholder="Full name" autoComplete="name" onChange={set("name")} />
         </div>

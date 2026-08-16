@@ -1198,6 +1198,9 @@ function Booking({ addBooking, go, user }) {
   const [done, setDone] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Bot protection
+  const [honeypot, setHoneypot] = useState("");
+  const [timingToken, setTimingToken] = useState("");
   const [slots, setSlots] = useState([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
   // User's existing bookings (for calendar highlighting)
@@ -1225,6 +1228,14 @@ function Booking({ addBooking, go, user }) {
 
   useEffect(() => { reloadSlots(); }, [reloadSlots]);
   useEffect(() => { if (user) setForm((f) => ({ ...f, name: user.name || "", email: user.email || "" })); }, [user]);
+
+  // Bot protection: generate timing token on mount
+  useEffect(() => {
+    const timestamp = Date.now();
+    const secretNum = 42 * 100;
+    const obfuscated = timestamp ^ secretNum;
+    setTimingToken(btoa(`${obfuscated}.${timestamp % 1000}`));
+  }, []);
 
   // Fetch user's existing bookings for calendar highlighting
   useEffect(() => {
@@ -1275,6 +1286,8 @@ function Booking({ addBooking, go, user }) {
         contact: user
           ? { phone: form.phone.trim() }
           : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+        // Bot protection (only relevant for guests)
+        ...(user ? {} : { website: honeypot, _t: timingToken }),
       });
 
       // Handle array of bookings for multi-select
@@ -1668,6 +1681,10 @@ function Booking({ addBooking, go, user }) {
             <div className="summary" style={{ marginBottom: 18 }}><div className="srow"><span className="k">Booking as</span><span className="v">{user.name}</span></div><div className="srow"><span className="k">Email</span><span className="v">{user.email}</span></div></div>
             <div className="field"><label>Phone (optional)</label><input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>
           </>) : (<>
+            {/* Honeypot field */}
+            <div style={{ position: "absolute", left: "-9999px", opacity: 0, pointerEvents: "none", height: 0, overflow: "hidden" }} aria-hidden="true">
+              <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" />
+            </div>
             <div className="field"><label>Full name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" /></div>
             <div className="field"><label>Email</label><input type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@email.com" /></div>
             <div className="field"><label>Phone</label><input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(909) 555-0123" /></div>

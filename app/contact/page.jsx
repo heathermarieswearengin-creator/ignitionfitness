@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { STUDIO } from "@/lib/config";
 import { Theme } from "@/app/theme";
 
@@ -63,6 +63,19 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Bot protection fields
+  const [honeypot, setHoneypot] = useState("");
+  const [timingToken, setTimingToken] = useState("");
+
+  // Generate timing token on mount
+  useEffect(() => {
+    // Simple client-side timing token: base64 of load timestamp
+    const timestamp = Date.now();
+    const secretNum = 42; // Must match server-side calculation approach
+    const obfuscated = timestamp ^ (secretNum * 100);
+    setTimingToken(btoa(`${obfuscated}.${timestamp % 1000}`));
+  }, []);
+
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = "Name is required";
@@ -94,6 +107,9 @@ export default function ContactPage() {
           phone: form.phone.trim() || null,
           interest: form.interest || null,
           message: form.message.trim(),
+          // Bot protection fields
+          website: honeypot, // Honeypot field (should be empty)
+          _t: timingToken,   // Timing token
         }),
       });
 
@@ -216,6 +232,27 @@ export default function ContactPage() {
                   </button>
                 </div>
               )}
+
+              {/* Honeypot field - hidden from users, bots will fill it */}
+              <div style={{
+                position: "absolute",
+                left: "-9999px",
+                opacity: 0,
+                pointerEvents: "none",
+                height: 0,
+                overflow: "hidden",
+              }} aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  type="text"
+                  id="website"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
 
               <div className="field">
                 <label>Name *</label>

@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { newResetToken, hashResetToken, siteUrlFrom, RESET_TTL_MS } from "@/lib/reset-tokens";
 import { sendPasswordReset } from "@/lib/email";
+import { checkRateLimit, RATE_LIMITS, getClientIP } from "@/lib/bot-protection";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,23 @@ const Forgot = z.object({
  * membership oracle.
  */
 export async function POST(request) {
+  // Rate limiting - must apply BEFORE we reveal anything about accounts
+  const ip = getClientIP(request);
+  const rateLimit = checkRateLimit(
+    "passwordReset",
+    ip,
+    RATE_LIMITS.passwordReset.maxAttempts,
+    RATE_LIMITS.passwordReset.windowMs
+  );
+  if (!rateLimit.allowed) {
+    // Return generic message even when rate limited to avoid oracle
+    return Response.json({
+      ok: true,
+      emailConfigured: true,
+      message: "If that email has an account, a reset link is on its way.",
+    });
+  }
+
   // Whether mail is configured is a property of the deployment, not of the
   // address being asked about — so it is decided BEFORE any lookup and the
   // same answer goes to everyone. Varying the reply once a user is found is

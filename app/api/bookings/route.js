@@ -7,6 +7,12 @@ import { currentUser, requireAdmin } from "@/lib/auth-helpers";
 import { sendBookingConfirmation } from "@/lib/email";
 import { generateManageToken, calculateTokenExpiry } from "@/lib/manage-token";
 import {
+  isHoneypotFilled,
+  checkRateLimit,
+  RATE_LIMITS,
+  getClientIP,
+} from "@/lib/bot-protection";
+import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
   STATUS_TO_DB,
@@ -35,7 +41,12 @@ const CartBooking = z.object({
     .max(20, "That's too many sessions in one go"),
   contact: Contact.partial().optional(),
   isDropIn: z.boolean().optional().default(false),
+  // Bot protection fields
+  website: z.string().optional(), // Honeypot
+  _t: z.string().optional(),      // Timing token
 });
+
+const MIN_FORM_TIME_MS = 2500;
 
 const LegacyBooking = Contact.extend({
   classType: z.enum(["group", "pt"]),
@@ -227,6 +238,46 @@ export async function POST(request) {
     const identity = user
       ? { name: user.name, email: user.email, phone: body?.contact?.phone ?? "", userId: user.id }
       : null;
+
+    // === BOT PROTECTION FOR GUEST BOOKINGS ===
+    if (!user && Array.isArray(body?.items)) {
+      // 1. Honeypot check - if filled, silently return fake success
+      if (isHoneypotFilled(body.website)) {
+        console.log("[bookings] Honeypot triggered, silent reject");
+        return Response.json([{ id: "fake", ref: "FAKE000", status: "confirmed" }], { status: 201 });
+      }
+
+      // 2. Timing check - reject too-fast submissions
+      if (body._t) {
+        try {
+          const decoded = atob(body._t);
+          const [obfuscatedStr] = decoded.split(".");
+          const obfuscated = parseInt(obfuscatedStr, 10);
+          const secretNum = 42 * 100;
+          const timestamp = obfuscated ^ secretNum;
+          const elapsed = Date.now() - timestamp;
+          if (elapsed < MIN_FORM_TIME_MS || elapsed > 60 * 60 * 1000) {
+            console.log("[bookings] Timing check failed, silent reject", { elapsed });
+            return Response.json([{ id: "fake", ref: "FAKE000", status: "confirmed" }], { status: 201 });
+          }
+        } catch {
+          console.log("[bookings] Invalid timing token, silent reject");
+          return Response.json([{ id: "fake", ref: "FAKE000", status: "confirmed" }], { status: 201 });
+        }
+      }
+
+      // 3. Rate limiting - we do tell the user about this one
+      const ip = getClientIP(request);
+      const rateLimit = checkRateLimit(
+        "guestBooking",
+        ip,
+        RATE_LIMITS.guestBooking.maxAttempts,
+        RATE_LIMITS.guestBooking.windowMs
+      );
+      if (!rateLimit.allowed) {
+        throw new HttpError(429, "Too many booking attempts. Please try again later.");
+      }
+    }
 
     const created = await serializableTx(prisma, async (tx) => {
       if (Array.isArray(body?.items)) {

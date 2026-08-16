@@ -2,6 +2,12 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, jsonError } from "@/lib/tx";
 import { sendContactEmail } from "@/lib/email";
+import {
+  isHoneypotFilled,
+  checkRateLimit,
+  RATE_LIMITS,
+  getClientIP,
+} from "@/lib/bot-protection";
 
 export const dynamic = "force-dynamic";
 
@@ -12,22 +18,70 @@ const INTEREST_LABELS = {
   general: "General Question",
 };
 
+// Minimum time (ms) for a human to fill the form
+const MIN_FORM_TIME_MS = 2500;
+
 const ContactSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  email: z.string().trim().email("Valid email is required"),
-  phone: z.string().trim().nullable().optional(),
-  interest: z.string().nullable().optional(),
-  message: z.string().trim().min(1, "Message is required"),
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: z.string().trim().email("Valid email is required").max(254),
+  phone: z.string().trim().max(30).nullable().optional(),
+  interest: z.string().max(50).nullable().optional(),
+  message: z.string().trim().min(1, "Message is required").max(5000),
+  // Bot protection fields
+  website: z.string().optional(), // Honeypot
+  _t: z.string().optional(),      // Timing token
 });
 
 export async function POST(request) {
   try {
-    const parsed = ContactSchema.safeParse(await request.json());
+    const body = await request.json();
+    const parsed = ContactSchema.safeParse(body);
     if (!parsed.success) {
       throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid form data");
     }
 
-    const { name, email, phone, interest, message } = parsed.data;
+    const { name, email, phone, interest, message, website, _t } = parsed.data;
+
+    // === BOT PROTECTION CHECKS ===
+
+    // 1. Honeypot check - if filled, silently accept (fake success to confuse bots)
+    if (isHoneypotFilled(website)) {
+      console.log("[contact] Honeypot triggered, silent reject");
+      return Response.json({ success: true });
+    }
+
+    // 2. Timing check - if too fast, silently accept
+    if (_t) {
+      try {
+        const decoded = atob(_t);
+        const [obfuscatedStr] = decoded.split(".");
+        const obfuscated = parseInt(obfuscatedStr, 10);
+        const secretNum = 42 * 100; // Must match client-side
+        const timestamp = obfuscated ^ secretNum;
+        const elapsed = Date.now() - timestamp;
+
+        if (elapsed < MIN_FORM_TIME_MS || elapsed > 60 * 60 * 1000) {
+          console.log("[contact] Timing check failed, silent reject", { elapsed });
+          return Response.json({ success: true });
+        }
+      } catch {
+        // Invalid token - could be bot, silently reject
+        console.log("[contact] Invalid timing token, silent reject");
+        return Response.json({ success: true });
+      }
+    }
+
+    // 3. Rate limiting - this one we do tell the user about
+    const ip = getClientIP(request);
+    const rateLimit = checkRateLimit(
+      "contact",
+      ip,
+      RATE_LIMITS.contact.maxAttempts,
+      RATE_LIMITS.contact.windowMs
+    );
+    if (!rateLimit.allowed) {
+      throw new HttpError(429, "Too many submissions. Please try again later.");
+    }
     const normalizedEmail = email.toLowerCase().trim();
     const interestLabel = interest ? INTEREST_LABELS[interest] || interest : null;
 
