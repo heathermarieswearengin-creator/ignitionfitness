@@ -42,6 +42,7 @@ export default function ManageBookingPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   // Reschedule state
   const [showReschedule, setShowReschedule] = useState(false);
@@ -165,7 +166,7 @@ export default function ManageBookingPage() {
       const res = await fetch(`/api/manage-booking/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel" }),
+        body: JSON.stringify({ action: "cancel", reason: cancelReason || undefined }),
       });
       const data = await res.json();
 
@@ -182,6 +183,8 @@ export default function ManageBookingPage() {
       setCancelling(false);
     }
   };
+
+  const CANCEL_REASONS = ["Sick", "Travel", "Schedule conflict", "Other"];
 
   // Reschedule booking
   const handleReschedule = async () => {
@@ -517,7 +520,7 @@ export default function ManageBookingPage() {
       {/* Cancel confirmation modal */}
       {showCancelConfirm && (
         <div
-          onClick={() => setShowCancelConfirm(false)}
+          onClick={() => { setShowCancelConfirm(false); setCancelReason(""); }}
           style={{
             position: "fixed", inset: 0, zIndex: 1000,
             background: "rgba(0,0,0,.85)", backdropFilter: "blur(4px)",
@@ -529,7 +532,7 @@ export default function ManageBookingPage() {
             onClick={e => e.stopPropagation()}
             style={{
               background: "var(--f900)", border: "1.5px solid var(--line)",
-              borderRadius: 18, padding: 28, width: "100%", maxWidth: 380,
+              borderRadius: 18, padding: 28, width: "100%", maxWidth: 420,
               textAlign: "center"
             }}
           >
@@ -544,7 +547,7 @@ export default function ManageBookingPage() {
             </p>
             <div style={{
               background: "var(--f800)", border: "1px solid var(--line)", borderRadius: 12,
-              padding: 16, marginBottom: 24
+              padding: 16, marginBottom: 20
             }}>
               <div style={{ fontFamily: "var(--display)", fontSize: 18, marginBottom: 4 }}>
                 {CLASS_MAP[booking.classType]?.label || booking.classType}
@@ -553,9 +556,56 @@ export default function ManageBookingPage() {
                 {fmtDate(booking.date)} · {booking.time}
               </div>
             </div>
+
+            {/* Reason field (only for 1:1 PT) */}
+            {(booking.classType === "pt" || booking.sessionType === "PT") && (
+              <div style={{ marginBottom: 24, textAlign: "left" }}>
+                <div style={{ fontSize: 12, color: "var(--ash)", marginBottom: 10 }}>
+                  Let Mike know why (optional)
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {CANCEL_REASONS.map(reason => (
+                    <button
+                      key={reason}
+                      onClick={() => setCancelReason(cancelReason === reason ? "" : reason)}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 20,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        background: cancelReason === reason ? "rgba(240,171,51,.2)" : "var(--f800)",
+                        border: cancelReason === reason ? "1px solid rgba(240,171,51,.5)" : "1px solid var(--line)",
+                        color: cancelReason === reason ? "var(--gold)" : "var(--bone)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  placeholder="Add details (optional)..."
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    background: "var(--f800)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 10,
+                    color: "var(--bone)",
+                    fontSize: 14,
+                    fontFamily: "inherit",
+                    resize: "none",
+                  }}
+                />
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 12 }}>
               <button
-                onClick={() => setShowCancelConfirm(false)}
+                onClick={() => { setShowCancelConfirm(false); setCancelReason(""); }}
                 className="btn btn-ghost"
                 style={{ flex: 1, padding: "14px 20px" }}
                 disabled={cancelling}

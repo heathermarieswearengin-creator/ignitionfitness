@@ -178,6 +178,19 @@ export default function BookingsPage() {
                     }}>
                       {b.email}
                     </div>
+                    {/* Cancellation reason */}
+                    {b.status === "cancelled" && b.cancellationReason && (
+                      <div style={{
+                        fontSize: 12,
+                        color: "#f59e0b",
+                        marginTop: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}>
+                        <span style={{ fontWeight: 500 }}>Reason:</span> {b.cancellationReason}
+                      </div>
+                    )}
                   </div>
                   <span className={"adm-badge " + statusBadgeClass(b.status)} style={{ flexShrink: 0, marginLeft: 8 }}>
                     {b.status}
@@ -241,6 +254,12 @@ export default function BookingsPage() {
                     <td>
                       <div style={{ fontWeight: 500 }}>{b.name}</div>
                       <div style={{ fontSize: 12, color: "#78716c" }}>{b.email}</div>
+                      {/* Cancellation reason */}
+                      {b.status === "cancelled" && b.cancellationReason && (
+                        <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 2 }}>
+                          Reason: {b.cancellationReason}
+                        </div>
+                      )}
                     </td>
                     <td>{formatDate(b.date)}</td>
                     <td>{b.time}</td>

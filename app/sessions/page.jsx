@@ -174,11 +174,32 @@ export default function SessionsPage() {
                     <div key={b.id} style={{
                       padding: 16,
                       background: "var(--f800)",
-                      border: "1px solid var(--line)",
+                      border: b.isStanding ? "1px solid rgba(168,85,247,.3)" : "1px solid var(--line)",
                       borderRadius: 12,
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                         <div>
+                          {/* Recurring tag for standing sessions */}
+                          {b.isStanding && (
+                            <div style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              padding: "3px 8px",
+                              background: "rgba(168,85,247,.15)",
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              color: "#a855f7",
+                              letterSpacing: ".03em",
+                              marginBottom: 6,
+                            }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M3 12a9 9 0 1 0 9-9M3 12V3m0 9h9" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              RECURRING
+                            </div>
+                          )}
                           <div style={{ fontWeight: 600, color: "var(--bone)" }}>
                             {b.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
                           </div>
@@ -186,18 +207,33 @@ export default function SessionsPage() {
                             {new Date(`${b.date}T00:00:00.000Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })} at {b.time}
                           </div>
                         </div>
-                        <span style={{
-                          padding: "4px 10px",
-                          background: "rgba(34, 197, 94, .15)",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "#22c55e"
-                        }}>
-                          {b.ref}
-                        </span>
+                        {b.isStanding ? (
+                          <span style={{
+                            padding: "4px 10px",
+                            background: "rgba(34, 197, 94, .15)",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "#22c55e"
+                          }}>
+                            Confirmed
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: "4px 10px",
+                            background: "rgba(34, 197, 94, .15)",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "#22c55e"
+                          }}>
+                            {b.ref}
+                          </span>
+                        )}
                       </div>
-                      {b.manageToken && (
+
+                      {/* Actions row - only for regular bookings */}
+                      {!b.isStanding && b.manageToken && (
                         <a
                           href={`/manage-booking/${b.manageToken}`}
                           style={{

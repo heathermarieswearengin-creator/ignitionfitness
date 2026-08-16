@@ -122,7 +122,7 @@ export async function POST(request, { params }) {
     const action = body.action;
 
     if (action === "cancel") {
-      return handleCancel(token);
+      return handleCancel(token, body.reason);
     } else if (action === "reschedule") {
       return handleReschedule(token, body.newSessionId);
     } else {
@@ -133,7 +133,7 @@ export async function POST(request, { params }) {
   }
 }
 
-async function handleCancel(token) {
+async function handleCancel(token, reason) {
   const prisma = getPrisma();
 
   const booking = await prisma.booking.findUnique({
@@ -160,16 +160,22 @@ async function handleCancel(token) {
     throw new HttpError(400, "Cannot cancel a session that has already started.");
   }
 
+  // Sanitize and truncate reason
+  const cleanReason = reason ? String(reason).trim().slice(0, 500) : null;
+
   const updated = await prisma.booking.update({
     where: { id: booking.id },
-    data: { status: "CANCELLED" },
+    data: {
+      status: "CANCELLED",
+      cancellationReason: cleanReason,
+    },
     include: { session: true },
   });
 
   const shaped = toClientBooking(updated, now.isoDay);
 
-  // Send cancellation email
-  sendCancellationEmail(shaped).catch((err) => {
+  // Send cancellation email (includes admin notification for 1:1)
+  sendCancellationEmail(shaped, { reason: cleanReason }).catch((err) => {
     console.error("[manage-booking] cancellation email failed:", err);
   });
 
