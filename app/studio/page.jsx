@@ -51,36 +51,36 @@ export default function StudioPage() {
         </div>
       </header>
 
-      {/* Gallery */}
+      {/* Gallery - using explicit inline styles to ensure sizing works */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           {/* Top row - exterior shots */}
-          <div className="studio-grid-top">
-            <div className="studio-img studio-img-lg">
-              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" />
+          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div style={{ height: 380, borderRadius: 14, overflow: "hidden" }}>
+              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            <div className="studio-img studio-img-sm">
-              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" />
+            <div style={{ height: 380, borderRadius: 14, overflow: "hidden" }}>
+              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
           </div>
 
           {/* Interior grid */}
-          <div className="studio-grid-main">
-            <div className="studio-img studio-img-wide">
-              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" />
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 14, marginBottom: 40 }}>
+            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
+              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            <div className="studio-img studio-img-med">
-              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" />
+            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
+              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            <div className="studio-img studio-img-med">
-              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" />
+            <div style={{ height: 280, borderRadius: 14, overflow: "hidden" }}>
+              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
           </div>
 
           {/* CTA with detail image */}
-          <div className="studio-cta-row">
-            <div className="studio-img studio-img-detail">
-              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" />
+          <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+            <div style={{ width: 260, height: 220, borderRadius: 14, overflow: "hidden", flexShrink: 0 }}>
+              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <div className="band">
               <div className="hero-glow2" />
