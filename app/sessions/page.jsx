@@ -1,908 +1,280 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { studioNow } from "@/lib/config";
-import { googleCalendarUrl } from "@/lib/ics";
+import { useState, useEffect } from "react";
 import { Theme } from "@/app/theme";
+import { studioNow, STUDIO } from "@/lib/config";
+import { googleCalendarUrl } from "@/lib/ics";
 
-const CLASS_MAP = {
-  group: { label: "Group Class" },
-  pt: { label: "1:1 Personal Training" },
-  GROUP: { label: "Group Class" },
-  PT: { label: "1:1 Personal Training" },
-};
+/**
+ * /sessions - Member's "My Sessions" page
+ * This is the landing page for logged-in members when accessing the PWA.
+ */
 
-const fmtDate = (iso) => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getUTCDay()];
-  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
-  return `${dow}, ${mon} ${d.getUTCDate()}`;
-};
+const LOGO_URL = "data:image/png;base64,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";
 
-const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function Logo({ h = 44 }) {
+  if (LOGO_URL && !LOGO_URL.includes("__")) return <img src={LOGO_URL} alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
+  return <span className="logo-word">IGNITION <b>FITNESS</b></span>;
+}
 
-// Icons
-const Bell = ({ s = 22 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M9 6a3 3 0 1 1 6 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M12 8c-3.5 0-6 2.8-6 6.5C6 18 8.7 21 12 21s6-3 6-6.5C18 10.8 15.5 8 12 8z" stroke="currentColor" strokeWidth="2"/></svg>);
-const User = ({ s = 22 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
-const Lock = ({ s = 26 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2"/></svg>);
-const CalendarIcon = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
+const Flame = ({ s = 18 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 2c1 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C9 9 9 11 11 11c1.5 0 2-1.5 1-4 .5.5 0 0 0-5z" fill="currentColor"/><path d="M12 22a6 6 0 0 0 6-6c0-2-1-4-2.5-5.5C16 13 14.5 14 13 14c-2.5 0-3-2.5-2-5C8 11 6 13 6 16a6 6 0 0 0 6 6z" fill="currentColor"/></svg>);
 const Arrow = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>);
-const ChevronDown = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>);
-const DownloadIcon = ({ s = 14 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>);
+const CalendarIcon = ({ s = 16 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
 
 export default function SessionsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const user = session?.user ?? null;
+  const isAdmin = user?.role === "ADMIN";
 
   const [data, setData] = useState({ upcoming: [], past: [] });
   const [loading, setLoading] = useState(true);
 
-  // Reschedule state
-  const [rescheduleBooking, setRescheduleBooking] = useState(null);
-  const [rescheduleStep, setRescheduleStep] = useState(1);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [slots, setSlots] = useState([]);
-  const [slotsLoaded, setSlotsLoaded] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => {
-    const now = studioNow();
-    const d = new Date(now.isoDay + "T00:00:00.000Z");
-    return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
-  });
-  const [rescheduling, setRescheduling] = useState(false);
-  const [rescheduleError, setRescheduleError] = useState(null);
-  const [rescheduleSuccess, setRescheduleSuccess] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login?next=/sessions");
+    }
+  }, [status, router]);
 
-  // Cancel state
-  const [cancelBooking, setCancelBooking] = useState(null);
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState(null);
-
-  // Expanded session in compact cards
-  const [expandedSession, setExpandedSession] = useState(null);
-
-  const reload = React.useCallback(() => {
-    if (!user) { setLoading(false); return; }
-    setLoading(true);
-    fetch("/api/me/bookings")
-      .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
-      .then(setData)
-      .catch(() => setData({ upcoming: [], past: [] }))
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/me/bookings");
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch {}
+      setLoading(false);
+    };
+    load();
   }, [user]);
 
-  useEffect(() => { reload(); }, [reload]);
-
-  // Load slots for reschedule
-  const loadSlots = React.useCallback(async () => {
-    if (!rescheduleBooking) return;
-    setSlotsLoaded(false);
-    const firstDay = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
-    const lastDay = new Date(Date.UTC(viewMonth.year, viewMonth.month + 2, 0));
-    const from = firstDay.toISOString().slice(0, 10);
-    const to = lastDay.toISOString().slice(0, 10);
-    try {
-      const res = await fetch("/api/availability?from=" + from + "&to=" + to);
-      setSlots(res.ok ? await res.json() : []);
-    } catch { setSlots([]); }
-    finally { setSlotsLoaded(true); }
-  }, [rescheduleBooking, viewMonth]);
-
-  useEffect(() => { if (rescheduleBooking) loadSlots(); }, [loadSlots, rescheduleBooking]);
-
-  const todayIso = studioNow().isoDay;
-
-  // Calendar helpers
-  const calendarDays = useMemo(() => {
-    const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
-    const lastOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month + 1, 0));
-    const startPad = firstOfMonth.getUTCDay();
-    const totalDays = lastOfMonth.getUTCDate();
-    const days = [];
-    for (let i = 0; i < startPad; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, 1 - (startPad - i))), outside: true });
-    for (let i = 1; i <= totalDays; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, i)), outside: false });
-    while (days.length < 42) { const last = days[days.length - 1].date; days.push({ date: new Date(last.getTime() + 86400000), outside: true }); }
-    return days;
-  }, [viewMonth]);
-
-  const classType = rescheduleBooking?.classType;
-  const slotsForDate = (d) => slots.filter((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
-  const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
-  const getOtherBookingsForDate = (dateIso) => data.upcoming.filter(b => b.date === dateIso && b.status !== "cancelled" && b.id !== rescheduleBooking?.id);
-  const hasOtherBookingOnDate = (dateIso) => getOtherBookingsForDate(dateIso).length > 0;
-  const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
-  const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
-
-  const openReschedule = (b) => {
-    setRescheduleBooking(b);
-    setRescheduleStep(1);
-    setSelectedSlot(null);
-    setSelectedDate(null);
-    setRescheduleError(null);
-    setRescheduleSuccess(null);
-  };
-
-  const closeReschedule = () => {
-    setRescheduleBooking(null);
-    setSelectedSlot(null);
-    setSelectedDate(null);
-    setRescheduleStep(1);
-    setRescheduleError(null);
-    setRescheduleSuccess(null);
-  };
-
-  const confirmReschedule = async () => {
-    if (!selectedSlot || !rescheduleBooking || rescheduling) return;
-    setRescheduling(true);
-    setRescheduleError(null);
-    try {
-      const res = await fetch(`/api/me/bookings/${rescheduleBooking.id}/reschedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newSessionId: selectedSlot.sessionId }),
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData?.error || "Could not reschedule");
-      setRescheduleSuccess(resData);
-      reload();
-    } catch (e) {
-      setRescheduleError(e.message);
-    } finally {
-      setRescheduling(false);
-    }
-  };
-
-  const openCancel = (b) => { setCancelBooking(b); setCancelError(null); };
-  const closeCancel = () => { setCancelBooking(null); setCancelError(null); };
-
-  const confirmCancel = async () => {
-    if (!cancelBooking || cancelling) return;
-    setCancelling(true);
-    setCancelError(null);
-    try {
-      const res = await fetch(`/api/me/bookings/${cancelBooking.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData?.error || "Could not cancel");
-      closeCancel();
-      reload();
-    } catch (e) {
-      setCancelError(e.message);
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  // Featured session card component
-  const FeaturedSessionCard = ({ b }) => (
-    <div style={{
-      background: "linear-gradient(145deg, #1d1411 0%, #281a15 100%)",
-      border: "2px solid #c9251c",
-      borderRadius: 18,
-      overflow: "hidden",
-      boxShadow: "0 4px 24px rgba(201,37,28,.15)"
-    }}>
-      <div style={{ padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", justifyContent: "space-between" }}>
-          <span style={{
-            fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, letterSpacing: ".16em",
-            textTransform: "uppercase", color: "#f0ab33",
-            background: "rgba(240,171,51,.12)", padding: "6px 12px", borderRadius: 20
-          }}>Next Session</span>
-          <span style={{
-            fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600, letterSpacing: ".08em",
-            textTransform: "uppercase", padding: "6px 12px", borderRadius: 20,
-            background: b.status === "confirmed" ? "rgba(34,197,94,.15)" : "rgba(251,191,36,.15)",
-            color: b.status === "confirmed" ? "#22c55e" : "#fbbf24"
-          }}>{b.status.replace("-", " ")}</span>
-        </div>
-      </div>
-      <div style={{ padding: 20, display: "flex", alignItems: "center", gap: 18 }}>
-        <div style={{
-          width: 56, height: 56, minWidth: 56, borderRadius: 14,
-          display: "grid", placeItems: "center",
-          background: "linear-gradient(150deg, rgba(224,45,36,.22), rgba(150,22,16,.08))",
-          color: "#f0ab33"
-        }}>
-          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={28} /> : <User s={28} />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#f3ece1", marginBottom: 4 }}>
-            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
-          </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 13, color: "#b0a193", letterSpacing: ".02em" }}>
-            {fmtDate(b.date)} · {b.time}
-          </div>
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "0 20px 16px" }}>
-        <button onClick={() => openReschedule(b)} style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".05em",
-          textTransform: "uppercase", padding: "12px 16px", borderRadius: 10,
-          cursor: "pointer", background: "transparent", border: "1.5px solid #3a261d", color: "#f3ece1"
-        }}>
-          <CalendarIcon s={16} />
-          <span>Reschedule</span>
-        </button>
-        <button onClick={() => openCancel(b)} style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".05em",
-          textTransform: "uppercase", padding: "12px 16px", borderRadius: 10,
-          cursor: "pointer", background: "rgba(239,68,68,.08)", border: "1.5px solid rgba(239,68,68,.3)", color: "#ef4444"
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-          <span>Cancel</span>
-        </button>
-      </div>
-      <div style={{ height: 1, background: "#3a261d", margin: "0 20px" }}></div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, padding: "16px 20px" }}>
-        <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 500, letterSpacing: ".03em",
-          color: "#b0a193", textDecoration: "none", padding: "6px 0"
-        }}>
-          <CalendarIcon s={16} />
-          <span>Google Calendar</span>
-        </a>
-        <a href={`/api/bookings/${b.id}/ics`} style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          fontFamily: "var(--mono)", fontSize: 12, fontWeight: 500, letterSpacing: ".03em",
-          color: "#b0a193", textDecoration: "none", padding: "6px 0"
-        }}>
-          <DownloadIcon s={16} />
-          <span>Download .ics</span>
-        </a>
-      </div>
-    </div>
-  );
-
-  // Compact session card for other upcoming sessions
-  const CompactSessionCard = ({ b, isExpanded, onToggle }) => (
-    <div style={{
-      background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 14,
-      overflow: "hidden", borderColor: isExpanded ? "rgba(224,45,36,.4)" : "#3a261d"
-    }}>
-      <button onClick={onToggle} style={{
-        display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "16px 18px",
-        background: "transparent", border: "none", cursor: "pointer", textAlign: "left"
-      }}>
-        <div style={{
-          width: 42, height: 42, minWidth: 42, borderRadius: 11,
-          display: "grid", placeItems: "center",
-          background: "rgba(240,171,51,.1)", color: "#b0a193"
-        }}>
-          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={20} /> : <User s={20} />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#f3ece1", marginBottom: 2 }}>
-            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
-          </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", letterSpacing: ".02em" }}>
-            {fmtDate(b.date)} · {b.time}
-          </div>
-        </div>
-        <span style={{
-          fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
-          textTransform: "uppercase", padding: "5px 10px", borderRadius: 20,
-          background: b.status === "confirmed" ? "rgba(34,197,94,.12)" : "rgba(251,191,36,.12)",
-          color: b.status === "confirmed" ? "#22c55e" : "#fbbf24"
-        }}>{b.status.replace("-", " ")}</span>
-        <div style={{ color: "#78716c", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
-          <ChevronDown s={18} />
-        </div>
-      </button>
-      {isExpanded && (
-        <div style={{ padding: "0 18px 16px", borderTop: "1px solid #281a15", paddingTop: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <button onClick={() => openReschedule(b)} style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
-              cursor: "pointer", background: "transparent", border: "1.5px solid #3a261d", color: "#f3ece1"
-            }}>
-              <CalendarIcon s={14} />
-              <span>Reschedule</span>
-            </button>
-            <button onClick={() => openCancel(b)} style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
-              cursor: "pointer", background: "rgba(239,68,68,.08)", border: "1.5px solid rgba(239,68,68,.3)", color: "#ef4444"
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-              <span>Cancel</span>
-            </button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, paddingTop: 10, borderTop: "1px solid #281a15" }}>
-            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
-              color: "#b0a193", textDecoration: "none"
-            }}>
-              <CalendarIcon s={14} />
-              <span>Google</span>
-            </a>
-            <a href={`/api/bookings/${b.id}/ics`} style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
-              color: "#b0a193", textDecoration: "none"
-            }}>
-              <DownloadIcon s={14} />
-              <span>.ics</span>
-            </a>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // Past session card (no actions)
-  const PastSessionCard = ({ b }) => (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
-      background: "#1d1411", border: "1px solid #281a15", borderRadius: 12,
-      padding: "14px 16px", opacity: 0.7
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10, display: "grid", placeItems: "center",
-          background: "#281a15", color: "#78716c"
-        }}>
-          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={18} /> : <User s={18} />}
-        </div>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#b0a193", marginBottom: 2 }}>
-            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
-          </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c" }}>
-            {fmtDate(b.date)} · {b.time}
-          </div>
-        </div>
-      </div>
-      <span style={{
-        fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
-        textTransform: "uppercase", padding: "5px 10px", borderRadius: 20,
-        background: b.status === "cancelled" ? "rgba(239,68,68,.1)" : "rgba(176,161,147,.1)",
-        color: b.status === "cancelled" ? "#ef4444" : "#78716c"
-      }}>{b.status.replace("-", " ")}</span>
-    </div>
-  );
-
-  if (status === "loading") {
+  // Show loading while checking auth
+  if (status === "loading" || !user) {
     return (
       <div className="ign">
         <Theme />
-        <div className="page"><div className="wrap"><div style={{ textAlign: "center", padding: 60, color: "#b0a193" }}>Loading...</div></div></div>
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--f1000)" }}>
+          <div style={{ textAlign: "center" }}>
+            <Logo h={48} />
+            <div style={{ marginTop: 24, color: "var(--ash)" }}>Loading...</div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <div className="ign">
-        <Theme />
-        <div className="page"><div className="wrap"><div className="gate">
-          <div className="glock"><Lock /></div>
-          <h2>Sign In</h2>
-          <p>Sign in to see your sessions.</p>
-          <a className="btn btn-primary" style={{ width: "100%" }} href="/login?next=/sessions">Sign In</a>
-        </div></div></div>
-      </div>
-    );
-  }
+  const handleSignOut = () => signOut({ callbackUrl: "/" });
 
   return (
     <div className="ign">
       <Theme />
-      <div className="page" style={{ paddingTop: 48, paddingBottom: 60 }}>
-        <div className="wrap" style={{ maxWidth: 720 }}>
-          {/* Header */}
-          <div style={{ marginBottom: 32 }}>
-            <button
-              onClick={() => router.push("/")}
-              style={{
-                background: "none", border: "none", color: "#b0a193",
-                fontFamily: "var(--mono)", fontSize: 12, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 6, marginBottom: 16
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-              Back
-            </button>
-            <h1 style={{ fontFamily: "var(--display)", fontSize: "clamp(32px, 6vw, 44px)", textTransform: "uppercase", marginBottom: 8 }}>
-              All Sessions
-            </h1>
-            <p style={{ color: "#b0a193", fontSize: 15 }}>Your complete session history</p>
-          </div>
 
-          {/* Upcoming Sessions */}
-          <div style={{
-            background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20, marginBottom: 24
-          }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "18px 22px", borderBottom: "1px solid #281a15"
+      {/* Header */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 50,
+        background: "rgba(12,9,8,.95)", backdropFilter: "blur(14px)",
+        borderBottom: "1px solid #3a261d",
+        padding: "0 20px"
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          height: 64, maxWidth: 720, margin: "0 auto"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Logo h={38} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {isAdmin && (
+              <a href="/admin" style={{
+                padding: "8px 14px",
+                background: "#1d1411",
+                border: "1px solid #3a261d",
+                borderRadius: 8,
+                color: "var(--gold)",
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "none"
+              }}>
+                Admin
+              </a>
+            )}
+            <button onClick={handleSignOut} style={{
+              padding: "8px 14px",
+              background: "transparent",
+              border: "1px solid #3a261d",
+              borderRadius: 8,
+              color: "var(--ash)",
+              fontSize: 13,
+              cursor: "pointer"
             }}>
-              <h2 style={{ fontFamily: "var(--display)", fontSize: 20, textTransform: "uppercase", letterSpacing: ".02em", color: "#f3ece1", margin: 0 }}>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 20px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{
+            fontFamily: "var(--display)",
+            fontSize: 28,
+            color: "var(--bone)",
+            marginBottom: 6
+          }}>
+            My Sessions
+          </h1>
+          <p style={{ color: "var(--ash)", fontSize: 14 }}>
+            Welcome back, {user.name?.split(" ")[0] || "there"}
+          </p>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 48, color: "var(--ash)" }}>
+            Loading your sessions...
+          </div>
+        ) : (
+          <>
+            {/* Upcoming */}
+            <section style={{ marginBottom: 32 }}>
+              <h2 style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: ".1em",
+                textTransform: "uppercase",
+                color: "var(--gold)",
+                marginBottom: 12
+              }}>
                 Upcoming
               </h2>
-              {data.upcoming.length > 0 && (
-                <span style={{
-                  fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                  background: "rgba(224,45,36,.15)", color: "#f0ab33",
-                  padding: "5px 12px", borderRadius: 20
-                }}>{data.upcoming.length}</span>
-              )}
-            </div>
-            <div style={{ padding: 20 }}>
-              {loading && <div style={{ textAlign: "center", color: "#b0a193", padding: 32 }}>Loading...</div>}
-              {!loading && data.upcoming.length === 0 && (
-                <div style={{ textAlign: "center", padding: "32px 20px", color: "#78716c" }}>
-                  <p style={{ marginBottom: 16 }}>No upcoming sessions</p>
-                  <button onClick={() => router.push("/")} className="btn btn-primary">Book a Session</button>
+
+              {data.upcoming.length === 0 ? (
+                <div style={{
+                  padding: 32,
+                  background: "var(--f800)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 14,
+                  textAlign: "center"
+                }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <CalendarIcon s={32} />
+                  </div>
+                  <p style={{ color: "var(--ash)", marginBottom: 16 }}>No upcoming sessions</p>
+                  <a href="/#book" className="btn btn-primary" style={{ textDecoration: "none" }}>
+                    Book a Session
+                  </a>
                 </div>
-              )}
-              {!loading && data.upcoming.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <FeaturedSessionCard b={data.upcoming[0]} />
-                  {data.upcoming.slice(1).map((b) => (
-                    <CompactSessionCard
-                      key={b.id}
-                      b={b}
-                      isExpanded={expandedSession === b.id}
-                      onToggle={() => setExpandedSession(expandedSession === b.id ? null : b.id)}
-                    />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {data.upcoming.map(b => (
+                    <div key={b.id} style={{
+                      padding: 16,
+                      background: "var(--f800)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 12,
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontWeight: 600, color: "var(--bone)" }}>
+                            {b.classType === "pt" ? "1:1 Personal Training" : "Group Class"}
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--ash)" }}>
+                            {new Date(`${b.date}T00:00:00.000Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })} at {b.time}
+                          </div>
+                        </div>
+                        <span style={{
+                          padding: "4px 10px",
+                          background: "rgba(34, 197, 94, .15)",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#22c55e"
+                        }}>
+                          {b.ref}
+                        </span>
+                      </div>
+                      {b.manageToken && (
+                        <a
+                          href={`/manage-booking/${b.manageToken}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 13,
+                            color: "var(--gold)",
+                            textDecoration: "none"
+                          }}
+                        >
+                          Manage booking <Arrow s={12} />
+                        </a>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
-            </div>
-          </div>
+            </section>
 
-          {/* Past & Cancelled Sessions */}
-          {data.past.length > 0 && (
-            <div style={{
-              background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20,
-              opacity: 0.85
-            }}>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "18px 22px", borderBottom: "1px solid #281a15"
-              }}>
-                <h2 style={{ fontFamily: "var(--display)", fontSize: 20, textTransform: "uppercase", letterSpacing: ".02em", color: "#b0a193", margin: 0 }}>
-                  Past & Cancelled
+            {/* Book more */}
+            <a
+              href="/#book"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                padding: 16,
+                background: "linear-gradient(150deg, var(--ember), var(--flame))",
+                borderRadius: 12,
+                color: "white",
+                fontWeight: 600,
+                textDecoration: "none",
+                marginBottom: 32
+              }}
+            >
+              <Flame s={20} />
+              Book Another Session
+            </a>
+
+            {/* Past sessions */}
+            {data.past.length > 0 && (
+              <section>
+                <h2 style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: ".1em",
+                  textTransform: "uppercase",
+                  color: "var(--ash)",
+                  marginBottom: 12
+                }}>
+                  Past Sessions
                 </h2>
-                <span style={{
-                  fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                  background: "rgba(176,161,147,.1)", color: "#78716c",
-                  padding: "5px 12px", borderRadius: 20
-                }}>{data.past.length}</span>
-              </div>
-              <div style={{ padding: 20 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {data.past.map((b) => <PastSessionCard key={b.id} b={b} />)}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Cancel Modal */}
-      {cancelBooking && (
-        <div
-          onClick={closeCancel}
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 16, overflowY: "auto"
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 20,
-              padding: "28px 24px", width: "100%", maxWidth: 400,
-              position: "relative", boxShadow: "0 20px 60px rgba(0,0,0,.5)"
-            }}
-          >
-            <button onClick={closeCancel} style={{
-              position: "absolute", top: 16, right: 16,
-              width: 32, height: 32, borderRadius: 8,
-              background: "rgba(255,255,255,.05)", border: "none",
-              color: "#78716c", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-
-            <h2 style={{
-              fontFamily: "var(--display)", fontSize: 24, textTransform: "uppercase",
-              letterSpacing: ".02em", color: "#f3ece1", marginBottom: 20, paddingRight: 32
-            }}>Cancel Session?</h2>
-
-            <div style={{
-              background: "#140d0b", border: "1px solid #281a15", borderRadius: 12,
-              padding: 16, marginBottom: 20
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 11, display: "grid", placeItems: "center",
-                  background: "rgba(239,68,68,.1)", color: "#ef4444"
-                }}>
-                  {cancelBooking.classType === "GROUP" || cancelBooking.classType === "group" ? <Bell s={22} /> : <User s={22} />}
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f3ece1", marginBottom: 2 }}>
-                    {CLASS_MAP[cancelBooking.classType?.toLowerCase()]?.label ?? cancelBooking.classType}
-                  </div>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 13, color: "#b0a193" }}>
-                    {fmtDate(cancelBooking.date)} · {cancelBooking.time}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <p style={{ color: "#b0a193", fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
-              This can't be undone. The slot will be released for others to book.
-            </p>
-
-            {cancelError && (
-              <div style={{
-                background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
-                borderRadius: 10, padding: "12px 14px", marginBottom: 20,
-                color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
-              }}>{cancelError}</div>
-            )}
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={closeCancel} disabled={cancelling} style={{
-                flex: 1, padding: "14px 20px", borderRadius: 10,
-                fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                letterSpacing: ".06em", textTransform: "uppercase",
-                background: "transparent", border: "1.5px solid #3a261d",
-                color: "#f3ece1", cursor: "pointer",
-                opacity: cancelling ? 0.5 : 1
-              }}>Keep Session</button>
-              <button onClick={confirmCancel} disabled={cancelling} style={{
-                flex: 1, padding: "14px 20px", borderRadius: 10,
-                fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                letterSpacing: ".06em", textTransform: "uppercase",
-                background: "rgba(239,68,68,.15)", border: "1.5px solid rgba(239,68,68,.4)",
-                color: "#ef4444", cursor: "pointer",
-                opacity: cancelling ? 0.5 : 1
-              }}>{cancelling ? "Cancelling..." : "Yes, Cancel"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Modal */}
-      {rescheduleBooking && !rescheduleSuccess && (
-        <div
-          onClick={closeReschedule}
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,.85)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "flex-end", justifyContent: "center",
-            overflowY: "auto"
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#140d0b", borderTop: "1.5px solid #3a261d",
-              borderRadius: "24px 24px 0 0",
-              padding: "24px 20px 32px", width: "100%", maxWidth: 500,
-              maxHeight: "92vh", overflowY: "auto",
-              position: "relative", boxShadow: "0 -10px 40px rgba(0,0,0,.5)"
-            }}
-          >
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: "#3a261d", margin: "0 auto 20px" }}></div>
-
-            <button onClick={closeReschedule} style={{
-              position: "absolute", top: 20, right: 16,
-              width: 36, height: 36, borderRadius: 10,
-              background: "rgba(255,255,255,.05)", border: "none",
-              color: "#78716c", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-
-            {rescheduleStep === 1 && (
-              <>
-                <h2 style={{
-                  fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase",
-                  letterSpacing: ".02em", color: "#f3ece1", marginBottom: 4, paddingRight: 40
-                }}>Reschedule Session</h2>
-
-                <div style={{
-                  background: "#1d1411", border: "1px solid #281a15", borderRadius: 12,
-                  padding: 14, marginBottom: 20, marginTop: 16
-                }}>
-                  <div style={{ fontSize: 10, color: "#78716c", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Currently</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 10, display: "grid", placeItems: "center",
-                      background: "rgba(240,171,51,.1)", color: "#f0ab33"
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {data.past.slice(0, 5).map(b => (
+                    <div key={b.id} style={{
+                      padding: 14,
+                      background: "var(--f900)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 10,
+                      opacity: 0.7
                     }}>
-                      {rescheduleBooking.classType === "GROUP" || rescheduleBooking.classType === "group" ? <Bell s={20} /> : <User s={20} />}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "#f3ece1" }}>
-                        {CLASS_MAP[rescheduleBooking.classType?.toLowerCase()]?.label ?? rescheduleBooking.classType}
+                      <div style={{ fontWeight: 500, color: "var(--bone)", fontSize: 14 }}>
+                        {b.classType === "pt" ? "1:1 PT" : "Group"}
                       </div>
-                      <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "#b0a193" }}>
-                        {fmtDate(rescheduleBooking.date)} · {rescheduleBooking.time}
+                      <div style={{ fontSize: 12, color: "var(--ash)" }}>
+                        {new Date(`${b.date}T00:00:00.000Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" })} · {b.time}
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-
-                <div style={{ fontSize: 14, color: "#f3ece1", fontWeight: 600, marginBottom: 16 }}>Pick a new date and time:</div>
-
-                {/* Month nav */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <button onClick={prevMonth} style={{
-                    width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "#1d1411", border: "1px solid #3a261d", color: "#b0a193", cursor: "pointer", fontSize: 18
-                  }}>←</button>
-                  <div style={{ fontFamily: "var(--body)", fontSize: 16, fontWeight: 600, color: "#f3ece1" }}>
-                    {monthNames[viewMonth.month]} {viewMonth.year}
-                  </div>
-                  <button onClick={nextMonth} style={{
-                    width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "#1d1411", border: "1px solid #3a261d", color: "#b0a193", cursor: "pointer", fontSize: 18
-                  }}>→</button>
-                </div>
-
-                {/* Calendar */}
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
-                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                      <div key={i} style={{ textAlign: "center", fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", padding: "6px 0", fontWeight: 600 }}>{d}</div>
-                    ))}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-                    {calendarDays.map(({ date, outside }, i) => {
-                      const isoD = date.toISOString().slice(0, 10);
-                      const isPast = isoD < todayIso;
-                      const hasAvail = !isPast && !outside && dayHasSlots(isoD);
-                      const isSelected = selectedDate === isoD;
-                      const hasOtherBooking = !outside && !isPast && hasOtherBookingOnDate(isoD);
-
-                      let bgColor = "transparent";
-                      let borderColor = "1px solid transparent";
-                      let textColor = outside || isPast ? "#3a261d" : "#78716c";
-
-                      if (isSelected) {
-                        bgColor = "#c9251c";
-                        borderColor = "1px solid #c9251c";
-                        textColor = "#fff";
-                      } else if (hasAvail && hasOtherBooking) {
-                        bgColor = "rgba(34,197,94,.15)";
-                        borderColor = "1px solid #22c55e";
-                        textColor = "#f3ece1";
-                      } else if (hasAvail) {
-                        bgColor = "#1d1411";
-                        borderColor = "1px solid #3a261d";
-                        textColor = "#f3ece1";
-                      }
-
-                      return (
-                        <button key={i} onClick={() => hasAvail && setSelectedDate(isoD)} disabled={!hasAvail} style={{
-                          width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontFamily: "var(--body)", fontSize: 14, fontWeight: isSelected ? 700 : 500,
-                          background: bgColor, color: textColor, border: borderColor,
-                          borderRadius: 10, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1,
-                          position: "relative"
-                        }}>
-                          {date.getUTCDate()}
-                          {hasOtherBooking && !isSelected && (
-                            <span style={{
-                              position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
-                              width: 5, height: 5, borderRadius: "50%", background: "#22c55e"
-                            }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 12, height: 12, borderRadius: 3, background: "#1d1411", border: "1px solid #3a261d" }} />
-                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "#78716c" }}>Available</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ position: "relative", width: 12, height: 12, borderRadius: 3, background: "rgba(34,197,94,.15)", border: "1px solid #22c55e" }}>
-                        <span style={{ position: "absolute", bottom: 1, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#22c55e" }} />
-                      </span>
-                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "#78716c" }}>You're booked</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Time slots */}
-                {selectedDate && (
-                  <div style={{ marginBottom: 20 }}>
-                    {hasOtherBookingOnDate(selectedDate) && (
-                      <div style={{
-                        display: "flex", alignItems: "flex-start", gap: 10,
-                        background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.3)",
-                        borderRadius: 10, padding: "12px 14px", marginBottom: 12
-                      }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                          <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
-                          <path d="M8 12l3 3 5-6" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <div>
-                          <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, color: "#22c55e", marginBottom: 4 }}>
-                            You have another session this day
-                          </div>
-                          <div style={{ fontSize: 12, color: "#f3ece1" }}>
-                            {getOtherBookingsForDate(selectedDate).map((b) => (
-                              <div key={b.id}>{CLASS_MAP[b.classType]?.label || b.classType} · {b.time}</div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div style={{ fontSize: 13, color: "#b0a193", marginBottom: 12 }}>Available times for {fmtDate(selectedDate)}:</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                      {slotsForDate(selectedDate).map((s) => (
-                        <button key={s.sessionId} onClick={() => setSelectedSlot(s)} style={{
-                          padding: "12px 18px", borderRadius: 10, fontSize: 14, fontWeight: 600,
-                          background: selectedSlot?.sessionId === s.sessionId ? "#c9251c" : "#1d1411",
-                          color: selectedSlot?.sessionId === s.sessionId ? "#fff" : "#f3ece1",
-                          border: selectedSlot?.sessionId === s.sessionId ? "none" : "1px solid #3a261d",
-                          cursor: "pointer"
-                        }}>{s.time}</button>
-                      ))}
-                      {slotsForDate(selectedDate).length === 0 && (
-                        <div style={{ color: "#78716c", fontSize: 13 }}>No available times on this date</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!selectedDate && !slotsLoaded && (
-                  <div style={{ textAlign: "center", color: "#78716c", padding: 20 }}>Loading availability...</div>
-                )}
-
-                {rescheduleError && (
-                  <div style={{
-                    background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
-                    borderRadius: 10, padding: "12px 14px", marginBottom: 16,
-                    color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
-                  }}>{rescheduleError}</div>
-                )}
-
-                <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                  <button onClick={closeReschedule} style={{
-                    flex: 1, padding: "14px 20px", borderRadius: 10,
-                    fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                    letterSpacing: ".06em", textTransform: "uppercase",
-                    background: "transparent", border: "1.5px solid #3a261d",
-                    color: "#f3ece1", cursor: "pointer"
-                  }}>Cancel</button>
-                  <button
-                    onClick={() => setRescheduleStep(2)}
-                    disabled={!selectedSlot}
-                    style={{
-                      flex: 1, padding: "14px 20px", borderRadius: 10,
-                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                      letterSpacing: ".06em", textTransform: "uppercase",
-                      background: selectedSlot ? "linear-gradient(150deg, #e02d24, #c9251c)" : "#281a15",
-                      border: "none", color: selectedSlot ? "#fff" : "#78716c",
-                      cursor: selectedSlot ? "pointer" : "not-allowed"
-                    }}
-                  >Review Change</button>
-                </div>
-              </>
+              </section>
             )}
-
-            {rescheduleStep === 2 && selectedSlot && (
-              <>
-                <h2 style={{
-                  fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase",
-                  letterSpacing: ".02em", color: "#f3ece1", marginBottom: 24, paddingRight: 40, textAlign: "center"
-                }}>Confirm Reschedule</h2>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 16, justifyContent: "center", marginBottom: 24 }}>
-                  <div style={{ textAlign: "center", flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "#78716c", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>From</div>
-                    <div style={{ fontFamily: "var(--display)", fontSize: 16, color: "#78716c", textDecoration: "line-through", marginBottom: 4 }}>
-                      {fmtDate(rescheduleBooking.date)}
-                    </div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 14, color: "#78716c" }}>{rescheduleBooking.time}</div>
-                  </div>
-                  <div style={{ color: "#f0ab33" }}><Arrow s={24} /></div>
-                  <div style={{ textAlign: "center", flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "#f0ab33", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>To</div>
-                    <div style={{ fontFamily: "var(--display)", fontSize: 16, color: "#f3ece1", marginBottom: 4 }}>
-                      {fmtDate(selectedSlot.date)}
-                    </div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 14, color: "#f0ab33" }}>{selectedSlot.time}</div>
-                  </div>
-                </div>
-
-                <p style={{ color: "#b0a193", fontSize: 14, textAlign: "center", marginBottom: 24 }}>
-                  {CLASS_MAP[rescheduleBooking.classType?.toLowerCase()]?.label ?? rescheduleBooking.classType}
-                </p>
-
-                {rescheduleError && (
-                  <div style={{
-                    background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)",
-                    borderRadius: 10, padding: "12px 14px", marginBottom: 20,
-                    color: "#ef4444", fontSize: 13, fontFamily: "var(--mono)"
-                  }}>{rescheduleError}</div>
-                )}
-
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button onClick={() => setRescheduleStep(1)} disabled={rescheduling} style={{
-                    flex: 1, padding: "14px 20px", borderRadius: 10,
-                    fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                    letterSpacing: ".06em", textTransform: "uppercase",
-                    background: "transparent", border: "1.5px solid #3a261d",
-                    color: "#f3ece1", cursor: "pointer",
-                    opacity: rescheduling ? 0.5 : 1
-                  }}>Back</button>
-                  <button onClick={confirmReschedule} disabled={rescheduling} style={{
-                    flex: 1, padding: "14px 20px", borderRadius: 10,
-                    fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-                    letterSpacing: ".06em", textTransform: "uppercase",
-                    background: rescheduling ? "#281a15" : "linear-gradient(150deg, #e02d24, #c9251c)",
-                    border: "none", color: rescheduling ? "#78716c" : "#fff",
-                    cursor: rescheduling ? "not-allowed" : "pointer"
-                  }}>{rescheduling ? "Rescheduling..." : "Confirm Reschedule"}</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Success */}
-      {rescheduleSuccess && (
-        <div
-          onClick={closeReschedule}
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,.85)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 20
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20,
-              padding: "32px 28px", width: "100%", maxWidth: 420, textAlign: "center"
-            }}
-          >
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px",
-              background: "linear-gradient(150deg, #e02d24, #c9251c)",
-              display: "grid", placeItems: "center",
-              boxShadow: "0 0 40px rgba(224,45,36,.4)"
-            }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12l4.5 4.5L19 7"/></svg>
-            </div>
-            <h2 style={{ fontFamily: "var(--display)", fontSize: 28, textTransform: "uppercase", marginBottom: 12 }}>Rescheduled</h2>
-            <p style={{ color: "#b0a193", fontSize: 14, marginBottom: 24 }}>
-              Your session has been moved to {fmtDate(rescheduleSuccess.newBooking?.date)} at {rescheduleSuccess.newBooking?.time}.
-            </p>
-            <button onClick={closeReschedule} className="btn btn-primary" style={{ padding: "14px 32px" }}>Done</button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </main>
     </div>
   );
 }
