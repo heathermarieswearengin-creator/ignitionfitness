@@ -268,9 +268,6 @@ function MySessions({ go, user, status }) {
   const [cancelError, setCancelError] = useState(null);
   const [cancelSuccess, setCancelSuccess] = useState(false);
 
-  // Past sessions visibility (collapsed by default)
-  const [showPast, setShowPast] = useState(false);
-
   const reload = React.useCallback(() => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
@@ -410,18 +407,11 @@ function MySessions({ go, user, status }) {
   const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
   const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); };
   const [selectedDate, setSelectedDate] = useState(null);
-  const [showAllSessions, setShowAllSessions] = useState(false);
-  const [expandedSession, setExpandedSession] = useState(null);
 
   // Icons for session cards
   const DownloadIcon = ({ s = 14 }) => (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-    </svg>
-  );
-  const ChevronDown = ({ s = 16 }) => (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <path d="M6 9l6 6 6-6"/>
     </svg>
   );
 
@@ -509,80 +499,6 @@ function MySessions({ go, user, status }) {
     </div>
   );
 
-  // Compact card for secondary sessions with inline styles
-  const CompactSessionCard = ({ b, isExpanded, onToggle }) => (
-    <div style={{
-      background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 14,
-      overflow: "hidden", borderColor: isExpanded ? "rgba(224,45,36,.4)" : "#3a261d"
-    }}>
-      <button onClick={onToggle} style={{
-        display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "16px 18px",
-        background: "transparent", border: "none", cursor: "pointer", textAlign: "left"
-      }}>
-        <div style={{
-          width: 42, height: 42, minWidth: 42, borderRadius: 11,
-          display: "grid", placeItems: "center",
-          background: "rgba(240,171,51,.1)", color: "#b0a193"
-        }}>
-          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={20} /> : <User s={20} />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#f3ece1", marginBottom: 2 }}>
-            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
-          </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c", letterSpacing: ".02em" }}>
-            {fmtDate(b.date)} · {b.time}
-          </div>
-        </div>
-        <div style={{ color: "#78716c", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
-          <ChevronDown s={18} />
-        </div>
-      </button>
-      {isExpanded && (
-        <div style={{ padding: "0 18px 16px", borderTop: "1px solid #281a15", paddingTop: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <button onClick={() => openReschedule(b)} style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
-              cursor: "pointer", background: "transparent", border: "1.5px solid #3a261d", color: "#f3ece1"
-            }}>
-              <CalendarIcon s={14} />
-              <span>Reschedule</span>
-            </button>
-            <button onClick={() => openCancel(b)} style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em",
-              textTransform: "uppercase", padding: "10px 12px", borderRadius: 10,
-              cursor: "pointer", background: "rgba(239,68,68,.08)", border: "1.5px solid rgba(239,68,68,.3)", color: "#ef4444"
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-              <span>Cancel</span>
-            </button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, paddingTop: 10, borderTop: "1px solid #281a15" }}>
-            <a href={googleCalendarUrl(b)} target="_blank" rel="noopener noreferrer" style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
-              color: "#b0a193", textDecoration: "none"
-            }}>
-              <CalendarIcon s={14} />
-              <span>Google</span>
-            </a>
-            <a href={`/api/bookings/${b.id}/ics`} style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              fontFamily: "var(--mono)", fontSize: 11, fontWeight: 500,
-              color: "#b0a193", textDecoration: "none"
-            }}>
-              <DownloadIcon s={14} />
-              <span>.ics</span>
-            </a>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="page my-sessions-page"><div className="wrap my-sessions-wrap">
       {/* Greeting */}
@@ -612,17 +528,14 @@ function MySessions({ go, user, status }) {
             <span style={{ fontSize: 12, opacity: 0.8 }}>Find your next class or 1:1</span>
           </div>
         </button>
-        <button
+        <a
+          href="/sessions"
           className="ms-action-card"
-          onClick={() => {
-            const el = document.getElementById("upcoming");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }}
           style={{
             display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
             width: "100%", textAlign: "left", padding: "18px 20px",
             background: "#1d1411", border: "2px solid #3a261d", borderRadius: 14,
-            color: "#f3ece1", cursor: "pointer", WebkitAppearance: "none"
+            color: "#f3ece1", cursor: "pointer", WebkitAppearance: "none", textDecoration: "none"
           }}
         >
           <div style={{ width: 48, height: 48, minWidth: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(224,45,36,0.12)", color: "#f0ab33" }}>
@@ -632,150 +545,13 @@ function MySessions({ go, user, status }) {
             <span style={{ fontFamily: "var(--display)", fontSize: 17, textTransform: "uppercase", lineHeight: 1.2 }}>View All Sessions</span>
             <span style={{ fontSize: 12, color: "#b0a193" }}>Past and upcoming history</span>
           </div>
-        </button>
+        </a>
       </div>
 
-      {/* Upcoming sessions */}
-      <div id="upcoming" style={{
-        background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20, marginBottom: 24
-      }}>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "18px 22px", borderBottom: "1px solid #281a15"
-        }}>
-          <h2 style={{ fontFamily: "var(--display)", fontSize: 22, textTransform: "uppercase", letterSpacing: ".02em", color: "#f3ece1", margin: 0 }}>
-            Upcoming Sessions
-          </h2>
-          {data.upcoming.length > 0 && (
-            <span style={{
-              fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-              background: "rgba(224,45,36,.15)", color: "#f0ab33",
-              padding: "5px 12px", borderRadius: 20
-            }}>{data.upcoming.length}</span>
-          )}
-        </div>
-        <div style={{ padding: 20 }}>
-          {loading && <div style={{ textAlign: "center", color: "#b0a193", padding: 32 }}>Loading…</div>}
-          {!loading && data.upcoming.length === 0 && (
-            <div style={{ textAlign: "center", padding: "48px 20px 56px" }}>
-              <div style={{
-                width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
-                display: "grid", placeItems: "center",
-                background: "linear-gradient(150deg, #1d1411, #281a15)",
-                border: "1.5px solid #3a261d", color: "#f0ab33"
-              }}><Bell s={48} /></div>
-              <h3 style={{ fontFamily: "var(--display)", fontSize: 28, textTransform: "uppercase", marginBottom: 12, color: "#f3ece1" }}>No upcoming sessions</h3>
-              <p style={{ color: "#b0a193", fontSize: 15, lineHeight: 1.6, marginBottom: 28, maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
-                You don't have any sessions booked yet.<br />Ready to ignite your fitness journey?
-              </p>
-              <button className="btn btn-primary" onClick={() => go("book")} style={{ padding: "14px 32px", fontSize: 13 }}>Book Your First Session</button>
-            </div>
-          )}
-          {!loading && data.upcoming.length > 0 && (
-            <div className="ms-sessions-structured">
-              {/* Featured next session */}
-              <FeaturedSessionCard b={data.upcoming[0]} />
-
-              {/* Remaining sessions - collapsed by default */}
-              {data.upcoming.length > 1 && (
-                <div style={{ marginTop: 8 }}>
-                  <button
-                    onClick={() => setShowAllSessions(!showAllSessions)}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      width: "100%", padding: "14px 20px",
-                      background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 12,
-                      fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".06em",
-                      textTransform: "uppercase", color: "#b0a193", cursor: "pointer"
-                    }}
-                  >
-                    <span>{showAllSessions ? "Hide" : "View all"} sessions ({data.upcoming.length - 1} more)</span>
-                    <span style={{ transform: showAllSessions ? "rotate(180deg)" : "none", transition: "transform .2s", display: "flex" }}>
-                      <ChevronDown s={18} />
-                    </span>
-                  </button>
-
-                  {showAllSessions && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-                      {data.upcoming.slice(1).map((b) => (
-                        <CompactSessionCard
-                          key={b.id}
-                          b={b}
-                          isExpanded={expandedSession === b.id}
-                          onToggle={() => setExpandedSession(expandedSession === b.id ? null : b.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Past sessions - collapsed by default */}
-      {data.past.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowPast(!showPast)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              width: "100%", padding: "14px 20px",
-              background: "transparent", border: "1.5px solid #3a261d", borderRadius: 12,
-              fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, letterSpacing: ".06em",
-              textTransform: "uppercase", color: "#78716c", cursor: "pointer",
-              marginBottom: showPast ? 12 : 0
-            }}
-          >
-            <span>{showPast ? "Hide" : "Show"} past & cancelled ({data.past.length})</span>
-            <span style={{ transform: showPast ? "rotate(180deg)" : "none", transition: "transform .2s", display: "flex" }}>
-              <ChevronDown s={18} />
-            </span>
-          </button>
-
-          {showPast && (
-            <div style={{
-              background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20,
-              opacity: 0.85
-            }}>
-              <div style={{ padding: 20 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {data.past.map((b) => (
-                    <div key={b.id} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
-                      background: "#1d1411", border: "1px solid #281a15", borderRadius: 12,
-                      padding: "14px 16px", opacity: 0.7
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{
-                          width: 38, height: 38, borderRadius: 10, display: "grid", placeItems: "center",
-                          background: "#281a15", color: "#78716c"
-                        }}>
-                          {b.classType === "GROUP" || b.classType === "group" ? <Bell s={18} /> : <User s={18} />}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "#b0a193", marginBottom: 2 }}>
-                            {CLASS_MAP[b.classType?.toLowerCase()]?.label ?? CLASS_MAP[b.classType]?.label ?? b.classType}
-                          </div>
-                          <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#78716c" }}>
-                            {fmtDate(b.date)} · {b.time}
-                          </div>
-                        </div>
-                      </div>
-                      <span style={{
-                        fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
-                        textTransform: "uppercase", padding: "5px 10px", borderRadius: 20,
-                        background: b.status === "cancelled" ? "rgba(239,68,68,.1)" : "rgba(176,161,147,.1)",
-                        color: b.status === "cancelled" ? "#ef4444" : "#78716c"
-                      }}>{b.status.replace("-", " ")}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Next Session - featured card only */}
+      {loading && <div style={{ textAlign: "center", color: "#b0a193", padding: 32 }}>Loading…</div>}
+      {!loading && data.upcoming.length > 0 && (
+        <FeaturedSessionCard b={data.upcoming[0]} />
       )}
 
       {/* Cancel confirmation modal */}
