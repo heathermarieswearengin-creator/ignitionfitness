@@ -202,6 +202,7 @@ function Nav({ view, go, user, isAdmin }) {
           <div className="nav-links">
             <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
             <a className="nlink" href="/our-story">OUR STORY</a>
+            <a className="nlink" href="/studio">THE STUDIO</a>
             <button className="nlink" onClick={() => { navTo("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
             {user && (
               <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
@@ -226,6 +227,7 @@ function Nav({ view, go, user, isAdmin }) {
       <div className={"mobile-nav" + (mobileOpen ? " open" : "")}>
         <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
         <a className="nlink" href="/our-story" onClick={closeMobile}>OUR STORY</a>
+        <a className="nlink" href="/studio" onClick={closeMobile}>THE STUDIO</a>
         <button className="nlink" onClick={() => { navTo("home"); closeMobile(); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
         {user && (
           <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
@@ -1822,6 +1824,7 @@ function Footer({ go }) {
         <div><h5>Navigate</h5>
           <a onClick={() => go("home")} style={{ cursor: "pointer" }}>Home</a>
           <a href="/our-story">Our Story</a>
+          <a href="/studio">The Studio</a>
           <a onClick={() => { go("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }} style={{ cursor: "pointer" }}>Pricing</a>
           <a onClick={() => go("book")} style={{ cursor: "pointer" }}>Book a Class</a>
         </div>
