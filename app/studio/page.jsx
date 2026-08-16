@@ -3,6 +3,7 @@ import React from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Theme } from "@/app/theme";
+import { PageHeader } from "@/app/components/PageHeader";
 
 function Logo({ h = 44 }) {
   return <img src="/images/logo.png" alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
@@ -41,15 +42,12 @@ export default function StudioPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       {/* Page Header */}
-      <header className="page-header">
-        <div className="wrap">
-          <div className="eyebrow reveal d1"><span className="dot" /> Take a Look Inside</div>
-          <h1 className="page-title reveal d2">The Studio</h1>
-          <p className="page-sub reveal d3">9,000 sq ft of dedicated kettlebell training space in Rancho Cucamonga.</p>
-        </div>
-      </header>
+      <PageHeader
+        badge="Take a Look Inside"
+        title="The Studio"
+        subtitle="9,000 sq ft of dedicated kettlebell training space in Rancho Cucamonga."
+      />
 
       {/* Gallery - using explicit inline styles to ensure sizing works */}
       <section className="section" style={{ paddingTop: 0 }}>

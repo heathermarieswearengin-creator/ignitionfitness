@@ -3,6 +3,7 @@ import React from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Theme } from "@/app/theme";
+import { PageHeader } from "@/app/components/PageHeader";
 
 // Logo - use the actual file from public/images
 function Logo({ h = 44 }) {
@@ -50,13 +51,11 @@ export default function OurStoryPage() {
       </nav>
 
       {/* Page Header */}
-      <header className="page-header">
-        <div className="wrap">
-          <div className="eyebrow reveal d1"><span className="dot" /> Est. 2008</div>
-          <h1 className="page-title reveal d2">Our Story</h1>
-          <p className="page-sub reveal d3">From a single bell to a community of lifters.</p>
-        </div>
-      </header>
+      <PageHeader
+        badge="Est. 2008"
+        title="Our Story"
+        subtitle="From a single bell to a community of lifters."
+      />
 
       {/* Coach Section - same layout as homepage coaching feature */}
       <section className="section">

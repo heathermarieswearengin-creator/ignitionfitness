@@ -1218,8 +1218,6 @@ function Home({ go, addLead }) {
           <div className="pcard">
             <div className="pname">1:1 Training</div>
             <div className="pamt">$80<span> /session</span></div>
-            <div className="pdesc">Your goals. Your pace. Packs from $65/session.</div>
-            <ul><li><Check /> One-on-one attention</li><li><Check /> 8 sessions, save $80</li><li><Check /> 12 sessions, save $180</li></ul>
             <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => go("book")}>Book a Session</button>
           </div>
         </div>
