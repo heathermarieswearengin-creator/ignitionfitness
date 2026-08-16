@@ -22,6 +22,7 @@ function Icon({ name, size = 20 }) {
     x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
     info: <><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>,
     userPlus: <><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></>,
+    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -90,12 +91,229 @@ function Toast({ message, type, onClose }) {
   );
 }
 
+// Convert to Member confirmation modal
+function ConvertModal({ lead, onClose, onSuccess }) {
+  const [state, setState] = useState("confirm"); // confirm | loading | success | error
+  const [result, setResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleConvert = async () => {
+    setState("loading");
+    setErrorMsg("");
+
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.error || "Failed to convert lead");
+        setState("error");
+        return;
+      }
+
+      setResult(data);
+      setState("success");
+      // Notify parent after a brief delay so user can see success state
+      setTimeout(() => onSuccess(data), 1500);
+    } catch (err) {
+      console.error("Convert error:", err);
+      setErrorMsg("Network error. Please try again.");
+      setState("error");
+    }
+  };
+
+  const modalStyle = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  };
+
+  const overlayStyle = {
+    position: "absolute",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+  };
+
+  const contentStyle = {
+    position: "relative",
+    background: "white",
+    borderRadius: 12,
+    padding: 24,
+    maxWidth: 440,
+    width: "100%",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+  };
+
+  const buttonBase = {
+    padding: "10px 20px",
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    border: "none",
+    transition: "opacity 0.15s",
+  };
+
+  return (
+    <div style={modalStyle}>
+      <div style={overlayStyle} onClick={state === "loading" ? undefined : onClose} />
+      <div style={contentStyle}>
+        {state === "confirm" && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: "#c9251c", color: "white",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}>
+                <Icon name="userPlus" size={20} />
+              </div>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#1c1917" }}>
+                Convert to Member
+              </h2>
+            </div>
+
+            <div style={{
+              background: "#f5f5f4", borderRadius: 8, padding: 14, marginBottom: 20
+            }}>
+              <div style={{ fontWeight: 500, color: "#1c1917", marginBottom: 4 }}>
+                {lead.name || "Unnamed Lead"}
+              </div>
+              <div style={{ fontSize: 14, color: "#78716c" }}>{lead.email}</div>
+            </div>
+
+            <div style={{ fontSize: 14, color: "#44403c", lineHeight: 1.6, marginBottom: 20 }}>
+              This will:
+              <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+                <li>Create a member account for this email</li>
+                <li>Send them a password setup email</li>
+                <li>Link any guest bookings to their account</li>
+              </ul>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={onClose}
+                style={{ ...buttonBase, background: "#f5f5f4", color: "#44403c" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConvert}
+                style={{ ...buttonBase, background: "#c9251c", color: "white" }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon name="mail" size={16} />
+                  Send Setup Email
+                </span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {state === "loading" && (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div className="adm-spinner" style={{ margin: "0 auto 16px", width: 32, height: 32 }} />
+            <div style={{ fontSize: 15, color: "#44403c" }}>
+              Creating account and sending email...
+            </div>
+          </div>
+        )}
+
+        {state === "success" && (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#dcfce7", color: "#166534",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <Icon name="check" size={24} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: "#166534", marginBottom: 8 }}>
+              {result?.alreadyHadAccount
+                ? "Already a Member"
+                : result?.setPasswordEmailSent
+                  ? "Success!"
+                  : "Account Created"}
+            </div>
+            <div style={{ fontSize: 14, color: "#44403c", lineHeight: 1.5 }}>
+              {result?.alreadyHadAccount ? (
+                <>
+                  {lead.name || lead.email} already has an account.
+                  {result.adoptedBookings > 0 && (
+                    <> Linked {result.adoptedBookings} guest booking{result.adoptedBookings > 1 ? "s" : ""}.</>
+                  )}
+                </>
+              ) : result?.setPasswordEmailSent ? (
+                <>
+                  Account created for {lead.name || lead.email}.
+                  <br />Password setup email sent!
+                  {result.adoptedBookings > 0 && (
+                    <> {result.adoptedBookings} guest booking{result.adoptedBookings > 1 ? "s" : ""} linked.</>
+                  )}
+                </>
+              ) : (
+                <>
+                  Account created, but email failed to send.
+                  <br />They&apos;ll need a manual password reset.
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {state === "error" && (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#fee2e2", color: "#991b1b",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <Icon name="x" size={24} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: "#991b1b", marginBottom: 8 }}>
+              Conversion Failed
+            </div>
+            <div style={{ fontSize: 14, color: "#44403c", marginBottom: 20 }}>
+              {errorMsg}
+            </div>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={onClose}
+                style={{ ...buttonBase, background: "#f5f5f4", color: "#44403c" }}
+              >
+                Close
+              </button>
+              <button
+                onClick={handleConvert}
+                style={{ ...buttonBase, background: "#c9251c", color: "white" }}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState(null);
   const [toast, setToast] = useState(null);
+  const [convertingLead, setConvertingLead] = useState(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -110,16 +328,7 @@ export default function LeadsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = async (id, newStatus, lead) => {
-    const previousStatus = lead.status;
-
-    // If changing TO "converted", use the convert endpoint
-    if (newStatus === "converted" && previousStatus !== "converted") {
-      await convertLead(id, lead);
-      return;
-    }
-
-    // Otherwise, just update the status
+  const updateStatus = async (id, newStatus) => {
     setUpdating(id);
     try {
       const res = await fetch(`/api/admin/leads/${id}`, {
@@ -140,48 +349,18 @@ export default function LeadsPage() {
     }
   };
 
-  const convertLead = async (id, lead) => {
-    setUpdating(id);
-    try {
-      const res = await fetch(`/api/leads/${id}/convert`, {
-        method: "POST",
-      });
+  const handleConversionSuccess = (lead, result) => {
+    // Update local state - the lead is now converted
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "converted" } : l));
+    setConvertingLead(null);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.error || "Failed to convert lead", "error");
-        return;
-      }
-
-      // Update the lead in local state
-      setLeads(prev => prev.map(l => l.id === id ? { ...l, status: "converted" } : l));
-
-      // Show appropriate success message
-      if (data.alreadyHadAccount) {
-        const bookingMsg = data.adoptedBookings > 0
-          ? ` Linked ${data.adoptedBookings} guest booking${data.adoptedBookings > 1 ? "s" : ""} to their account.`
-          : "";
-        showToast(`${lead.name || lead.email} already has an account.${bookingMsg}`, "info");
-      } else {
-        if (data.setPasswordEmailSent) {
-          const bookingMsg = data.adoptedBookings > 0
-            ? ` ${data.adoptedBookings} guest booking${data.adoptedBookings > 1 ? "s" : ""} linked.`
-            : "";
-          showToast(`Account created for ${lead.name || lead.email}! Password setup email sent.${bookingMsg}`, "success");
-        } else {
-          // Email failed but account was created
-          showToast(
-            `Account created for ${lead.name || lead.email}, but email failed to send. They'll need a manual password reset.`,
-            "warning"
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Convert error:", err);
-      showToast("Failed to convert lead. Please try again.", "error");
-    } finally {
-      setUpdating(null);
+    // Show appropriate toast
+    if (result.alreadyHadAccount) {
+      showToast(`${lead.name || lead.email} was already a member`, "info");
+    } else if (result.setPasswordEmailSent) {
+      showToast(`${lead.name || lead.email} converted! Setup email sent.`, "success");
+    } else {
+      showToast(`Account created but email failed. Manual reset needed.`, "warning");
     }
   };
 
@@ -201,6 +380,14 @@ export default function LeadsPage() {
           message={toast.message}
           type={toast.type}
           onClose={() => setToast(null)}
+        />
+      )}
+
+      {convertingLead && (
+        <ConvertModal
+          lead={convertingLead}
+          onClose={() => setConvertingLead(null)}
+          onSuccess={(result) => handleConversionSuccess(convertingLead, result)}
         />
       )}
 
@@ -283,24 +470,53 @@ export default function LeadsPage() {
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <select
-                          value={lead.status}
-                          onChange={e => updateStatus(lead.id, e.target.value, lead)}
-                          disabled={updating === lead.id}
-                          style={{
-                            padding: "6px 10px",
-                            borderRadius: 6,
-                            border: "1px solid #e7e5e4",
-                            background: updating === lead.id ? "#f5f5f4" : "white",
-                            fontSize: 13,
-                            cursor: updating === lead.id ? "wait" : "pointer",
-                          }}
-                        >
-                          <option value="new">New</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="converted">Convert to Member</option>
-                          <option value="dead">Dead</option>
-                        </select>
+                        {lead.status === "converted" ? (
+                          <span style={{ fontSize: 13, color: "#78716c" }}>
+                            Member
+                          </span>
+                        ) : (
+                          <>
+                            <select
+                              value={lead.status}
+                              onChange={e => updateStatus(lead.id, e.target.value)}
+                              disabled={updating === lead.id}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 6,
+                                border: "1px solid #e7e5e4",
+                                background: updating === lead.id ? "#f5f5f4" : "white",
+                                fontSize: 13,
+                                cursor: updating === lead.id ? "wait" : "pointer",
+                              }}
+                            >
+                              <option value="new">New</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="dead">Dead</option>
+                            </select>
+                            <button
+                              onClick={() => setConvertingLead(lead)}
+                              disabled={updating === lead.id}
+                              title="Convert to member"
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: "#c9251c",
+                                color: "white",
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <Icon name="userPlus" size={14} />
+                              Convert
+                            </button>
+                          </>
+                        )}
                         {updating === lead.id && (
                           <div className="adm-spinner" style={{ width: 16, height: 16 }} />
                         )}
