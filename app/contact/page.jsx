@@ -1,7 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { STUDIO } from "@/lib/config";
 import { Theme } from "@/app/theme";
+import { Nav } from "@/app/components/Nav";
+
+function Logo({ h = 44 }) {
+  return <img src="/images/logo.png" alt="Ignition Fitness" style={{ height: h, width: "auto", display: "block" }} />;
+}
 
 const INTEREST_OPTIONS = [
   { value: "", label: "Select an option..." },
@@ -51,6 +57,7 @@ const PHONE_NUMBER = "(909) 921-4463";
 const PHONE_TEL = "tel:+19099214463";
 
 export default function ContactPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -171,6 +178,7 @@ export default function ContactPage() {
   return (
     <div className="ign">
       <Theme />
+      <Nav activePage="contact" />
       <div className="wrap" style={{ padding: "48px 24px 80px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           {/* Header */}
@@ -516,6 +524,38 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="foot">
+        <div className="wrap">
+          <div className="foot-grid">
+            <div>
+              <button className="logo" onClick={() => router.push("/")} style={{ marginBottom: 16 }}>
+                <Logo h={44} />
+              </button>
+              <p style={{ maxWidth: "34ch" }}>Forging strength, one swing at a time. Small-group kettlebell training in Rancho Cucamonga.</p>
+            </div>
+            <div>
+              <h5>Navigate</h5>
+              <a href="/">Home</a>
+              <a href="/our-story">Our Story</a>
+              <a href="/studio">The Studio</a>
+              <a href="/#pricing">Pricing</a>
+              <a href="/contact">Contact</a>
+            </div>
+            <div>
+              <h5>Contact</h5>
+              <a href="mailto:mike@ignitionfitness.com">mike@ignitionfitness.com</a>
+              <a href="tel:9099214463">(909) 921-4463</a>
+              <p>9125 Archibald Ave, Ste D<br />Rancho Cucamonga, CA 91730</p>
+            </div>
+          </div>
+          <div className="foot-bottom">
+            <span>© {new Date().getFullYear()} Ignition Fitness. All rights reserved.</span>
+            <span>Rancho Cucamonga, CA</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

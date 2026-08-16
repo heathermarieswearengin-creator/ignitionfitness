@@ -92,6 +92,9 @@ export default function OurStoryPage() {
             <h2>Ready To Ignite?</h2>
             <p>Your first class is just $25. No commitment, no contracts. Just show up.</p>
             <button className="btn btn-ghost" onClick={() => router.push("/")}>Book Your First Class</button>
+            <p style={{ marginTop: 16, fontSize: 14, color: "var(--ash)" }}>
+              Have questions first? <a href="/contact" style={{ color: "var(--ember2)", textDecoration: "underline", textUnderlineOffset: 2 }}>Contact us</a>
+            </p>
           </div>
         </div>
       </section>
@@ -112,6 +115,7 @@ export default function OurStoryPage() {
               <a href="/our-story">Our Story</a>
               <a href="/studio">The Studio</a>
               <a href="/#pricing">Pricing</a>
+              <a href="/contact">Contact</a>
             </div>
             <div>
               <h5>Contact</h5>

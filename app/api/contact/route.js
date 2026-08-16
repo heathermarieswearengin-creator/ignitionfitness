@@ -60,9 +60,14 @@ export async function POST(request) {
         const timestamp = obfuscated ^ secretNum;
         const elapsed = Date.now() - timestamp;
 
-        if (elapsed < MIN_FORM_TIME_MS || elapsed > 60 * 60 * 1000) {
-          console.log("[contact] Timing check failed, silent reject", { elapsed });
+        // Only reject if too fast (bot behavior) - allow long form sessions
+        if (elapsed < MIN_FORM_TIME_MS) {
+          console.log("[contact] Timing check failed (too fast), silent reject", { elapsed });
           return Response.json({ success: true });
+        }
+        // Warn but don't reject if token is very old (user had page open a long time)
+        if (elapsed > 24 * 60 * 60 * 1000) {
+          console.log("[contact] Timing token very old, but allowing submission", { elapsed });
         }
       } catch {
         // Invalid token - could be bot, silently reject

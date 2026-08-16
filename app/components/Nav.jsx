@@ -28,6 +28,7 @@ export function Nav({ activePage }) {
             <button className={"nlink" + (activePage === "our-story" ? " on" : "")} onClick={() => router.push("/our-story")}>OUR STORY</button>
             <button className={"nlink" + (activePage === "studio" ? " on" : "")} onClick={() => router.push("/studio")}>THE STUDIO</button>
             <button className="nlink" onClick={() => router.push("/#pricing")}>PRICING</button>
+            <button className={"nlink" + (activePage === "contact" ? " on" : "")} onClick={() => router.push("/contact")}>CONTACT</button>
             {user ? (
               <>
                 <button className="nlink" onClick={() => router.push("/sessions")}>MY SESSIONS</button>
@@ -52,6 +53,7 @@ export function Nav({ activePage }) {
         <a className={"nlink" + (activePage === "our-story" ? " on" : "")} href="/our-story" onClick={closeMobile}>OUR STORY</a>
         <a className={"nlink" + (activePage === "studio" ? " on" : "")} href="/studio" onClick={closeMobile}>THE STUDIO</a>
         <a className="nlink" href="/#pricing" onClick={closeMobile}>PRICING</a>
+        <a className={"nlink" + (activePage === "contact" ? " on" : "")} href="/contact" onClick={closeMobile}>CONTACT</a>
         {user && (
           <a className="nlink" href="/sessions" onClick={closeMobile}>MY SESSIONS</a>
         )}

@@ -204,6 +204,7 @@ function Nav({ view, go, user, isAdmin }) {
             <a className="nlink" href="/our-story">OUR STORY</a>
             <a className="nlink" href="/studio">THE STUDIO</a>
             <button className="nlink" onClick={() => { navTo("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
+            <a className="nlink" href="/contact">CONTACT</a>
             {user && (
               <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
             )}
@@ -229,6 +230,7 @@ function Nav({ view, go, user, isAdmin }) {
         <a className="nlink" href="/our-story" onClick={closeMobile}>OUR STORY</a>
         <a className="nlink" href="/studio" onClick={closeMobile}>THE STUDIO</a>
         <button className="nlink" onClick={() => { navTo("home"); closeMobile(); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
+        <a className="nlink" href="/contact" onClick={closeMobile}>CONTACT</a>
         {user && (
           <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
         )}
@@ -1224,6 +1226,9 @@ function Home({ go, addLead }) {
         <p style={{ color: "var(--ash)", fontSize: 14, fontFamily: "var(--mono)", textAlign: "center", marginTop: 24, letterSpacing: ".02em" }}>
           Payment is handled in person on the day of your session — no online payment required to book.
         </p>
+        <p style={{ color: "var(--ash)", fontSize: 14, textAlign: "center", marginTop: 12 }}>
+          Questions about pricing? <a href="/contact" style={{ color: "var(--ember2)", textDecoration: "underline", textUnderlineOffset: 2 }}>Get in touch</a>
+        </p>
       </div></section>
 
       <section className="section" style={{ paddingTop: 0 }}><div className="wrap">
@@ -1231,6 +1236,9 @@ function Home({ go, addLead }) {
           <h2>Ready To Ignite?</h2>
           <p>Your first class is waiting. Show up, work hard, see what happens.</p>
           <button className="btn btn-ghost" onClick={() => go("book")}>Get Started Today</button>
+          <p style={{ marginTop: 16, fontSize: 14, color: "var(--ash)" }}>
+            Have questions first? <a href="/contact" style={{ color: "var(--ember2)", textDecoration: "underline", textUnderlineOffset: 2 }}>Contact us</a>
+          </p>
         </div>
       </div></section>
     </>
@@ -1824,6 +1832,7 @@ function Footer({ go }) {
           <a href="/our-story">Our Story</a>
           <a href="/studio">The Studio</a>
           <a onClick={() => { go("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }} style={{ cursor: "pointer" }}>Pricing</a>
+          <a href="/contact">Contact</a>
           <a onClick={() => go("book")} style={{ cursor: "pointer" }}>Book a Class</a>
         </div>
         <div><h5>Contact</h5>
