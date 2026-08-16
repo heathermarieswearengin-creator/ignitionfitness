@@ -36,6 +36,7 @@ export default function ManageBookingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [booking, setBooking] = useState(null);
+  const [otherBookings, setOtherBookings] = useState([]);
 
   // Cancel state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -76,6 +77,7 @@ export default function ManageBookingPage() {
         }
 
         setBooking(data);
+        setOtherBookings(data.otherBookings || []);
       } catch (err) {
         setError("Failed to load booking. Please try again.");
       } finally {
@@ -141,8 +143,10 @@ export default function ManageBookingPage() {
     return days;
   }, [viewMonth]);
 
-  const dayHasSlots = (isoDay) => slots.some(s => s.date === isoDay && s.spots > 0);
-  const slotsForDate = (isoDay) => slots.filter(s => s.date === isoDay && s.spots > 0);
+  const dayHasSlots = (isoDay) => slots.some(s => s.date === isoDay && s.spotsLeft > 0);
+  const slotsForDate = (isoDay) => slots.filter(s => s.date === isoDay && s.spotsLeft > 0);
+  const getOtherBookingsForDate = (isoDay) => otherBookings.filter(b => b.date === isoDay && b.status !== "cancelled");
+  const hasOtherBookingOnDate = (isoDay) => getOtherBookingsForDate(isoDay).length > 0;
 
   const prevMonth = () => setViewMonth(v => {
     const d = new Date(Date.UTC(v.year, v.month - 1, 1));
@@ -678,6 +682,7 @@ export default function ManageBookingPage() {
                       const isPast = isoD < todayIso;
                       const hasAvail = !isPast && !outside && dayHasSlots(isoD);
                       const isSelected = selectedDate === isoD;
+                      const hasOtherBooking = !outside && !isPast && hasOtherBookingOnDate(isoD);
 
                       let bgColor = "transparent";
                       let borderColor = "1px solid transparent";
@@ -687,6 +692,10 @@ export default function ManageBookingPage() {
                         bgColor = "#c9251c";
                         borderColor = "1px solid #c9251c";
                         textColor = "#fff";
+                      } else if (hasAvail && hasOtherBooking) {
+                        bgColor = "rgba(34,197,94,.15)";
+                        borderColor = "1px solid #22c55e";
+                        textColor = "#f3ece1";
                       } else if (hasAvail) {
                         bgColor = "#1d1411";
                         borderColor = "1px solid #3a261d";
@@ -698,18 +707,67 @@ export default function ManageBookingPage() {
                           width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                           fontFamily: "var(--body)", fontSize: 14, fontWeight: isSelected ? 700 : 500,
                           background: bgColor, color: textColor, border: borderColor,
-                          borderRadius: 10, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1
+                          borderRadius: 10, cursor: hasAvail ? "pointer" : "default", opacity: outside ? 0.3 : 1,
+                          position: "relative",
                         }}>
                           {date.getUTCDate()}
+                          {hasOtherBooking && !isSelected && (
+                            <span style={{
+                              position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
+                              width: 5, height: 5, borderRadius: "50%", background: "#22c55e",
+                            }} />
+                          )}
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* Calendar legend */}
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+                    marginTop: 12, flexWrap: "wrap"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 12, height: 12, borderRadius: 3, background: "#1d1411", border: "1px solid #3a261d" }} />
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "#78716c", letterSpacing: ".03em" }}>Available</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ position: "relative", width: 12, height: 12, borderRadius: 3, background: "rgba(34,197,94,.15)", border: "1px solid #22c55e" }}>
+                        <span style={{ position: "absolute", bottom: 1, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#22c55e" }} />
+                      </span>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "#78716c", letterSpacing: ".03em" }}>You're booked</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Time slots */}
                 {selectedDate && (
                   <div style={{ marginBottom: 20 }}>
+                    {/* Banner for days with other bookings */}
+                    {hasOtherBookingOnDate(selectedDate) && (
+                      <div style={{
+                        display: "flex", alignItems: "flex-start", gap: 10,
+                        background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.3)",
+                        borderRadius: 10, padding: "12px 14px", marginBottom: 12
+                      }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                          <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+                          <path d="M8 12l3 3 5-6" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <div>
+                          <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, color: "#22c55e", letterSpacing: ".03em", marginBottom: 4 }}>
+                            You have another session this day
+                          </div>
+                          <div style={{ fontSize: 12, color: "#f3ece1", lineHeight: 1.4 }}>
+                            {getOtherBookingsForDate(selectedDate).map((b) => (
+                              <div key={b.id}>
+                                {CLASS_MAP[b.classType]?.label || b.classType} · {b.time}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div style={{ fontSize: 13, color: "#b0a193", marginBottom: 12 }}>Available times for {fmtDate(selectedDate)}:</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                       {slotsForDate(selectedDate).map((s) => (

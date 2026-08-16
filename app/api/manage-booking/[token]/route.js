@@ -64,7 +64,22 @@ export async function GET(request, { params }) {
       throw new HttpError(410, "This link has expired.");
     }
 
-    const shaped = toClientBooking(booking, studioNow().isoDay);
+    const now = studioNow();
+    const shaped = toClientBooking(booking, now.isoDay);
+
+    // Fetch other upcoming bookings for this email (to show "already booked" days)
+    const otherBookings = await prisma.booking.findMany({
+      where: {
+        email: { equals: booking.email, mode: "insensitive" },
+        id: { not: booking.id },
+        status: { not: "CANCELLED" },
+        session: { date: { gte: new Date(`${now.isoDay}T00:00:00.000Z`) } },
+      },
+      include: { session: true },
+      orderBy: { session: { date: "asc" } },
+    });
+
+    const otherBookingsShaped = otherBookings.map(b => toClientBooking(b, now.isoDay));
 
     // Return only what's needed for the manage page
     return Response.json({
@@ -79,6 +94,7 @@ export async function GET(request, { params }) {
       status: shaped.status,
       startTime: shaped.startTime,
       durationMin: shaped.durationMin,
+      otherBookings: otherBookingsShaped,
     });
   } catch (err) {
     return jsonError(err);
