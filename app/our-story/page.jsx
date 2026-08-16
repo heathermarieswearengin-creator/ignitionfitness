@@ -44,7 +44,7 @@ export default function OurStoryPage() {
             </div>
             <div className="coaching-text">
               <div className="kicker">Meet Your Coach</div>
-              <h3>Mike Williams</h3>
+              <h3>Mike Visscher</h3>
               <p><span className="highlight">RKC-certified since 2008.</span> 15+ years of kettlebell coaching. One mission: help you get stronger than you thought possible.</p>
               <p>Mike discovered kettlebells when they were still considered "unconventional" in most gyms. After earning his RKC certification — one of the most rigorous kettlebell certifications in the world — he knew he'd found his calling.</p>
               <blockquote className="story-quote">
