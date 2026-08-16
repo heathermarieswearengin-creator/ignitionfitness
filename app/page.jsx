@@ -63,8 +63,8 @@ function Logo({ h = 44 }) {
 
 /* ---------- error boundary ---------- */
 class BookingErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { hasError: false }; }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  constructor(props) { super(props); this.state = { hasError: false, errorMessage: "" }; }
+  static getDerivedStateFromError(error) { return { hasError: true, errorMessage: error?.message || String(error) }; }
   componentDidCatch(error, info) { console.error("Booking render error:", error, info); }
   render() {
     if (this.state.hasError) {
@@ -73,7 +73,8 @@ class BookingErrorBoundary extends React.Component {
           <div className="page-head"><h1>Booking Error</h1><p>Something went wrong. Please try again.</p></div>
           <div className="card" style={{ textAlign: "center", padding: 32 }}>
             <p style={{ color: "var(--ash)", marginBottom: 20 }}>We couldn't complete your booking. The session may already be full or you may already have a booking at this time.</p>
-            <button className="btn btn-primary" onClick={() => { this.setState({ hasError: false }); this.props.onReset?.(); }}>Try Again</button>
+            {this.state.errorMessage && <p style={{ color: "var(--ash)", fontSize: 12, fontFamily: "var(--mono)", marginBottom: 20, opacity: 0.7 }}>Debug: {this.state.errorMessage}</p>}
+            <button className="btn btn-primary" onClick={() => { this.setState({ hasError: false, errorMessage: "" }); this.props.onReset?.(); }}>Try Again</button>
             <button className="btn btn-ghost" style={{ marginLeft: 12 }} onClick={() => this.props.go?.("home")}>Back to Home</button>
           </div>
         </div></div>
