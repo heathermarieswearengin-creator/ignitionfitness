@@ -201,8 +201,8 @@ function Nav({ view, go, user, isAdmin }) {
           </button>
           <div className="nav-links">
             <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
-            <button className="nlink" onClick={() => navTo("home")}>OUR STORY</button>
-            <button className="nlink" onClick={() => navTo("home")}>PRICING</button>
+            <a className="nlink" href="/our-story">OUR STORY</a>
+            <button className="nlink" onClick={() => { navTo("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
             {user && (
               <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
             )}
@@ -225,8 +225,8 @@ function Nav({ view, go, user, isAdmin }) {
       </nav>
       <div className={"mobile-nav" + (mobileOpen ? " open" : "")}>
         <button className={"nlink" + (view === "home" ? " on" : "")} onClick={() => navTo("home")}>HOME</button>
-        <button className="nlink" onClick={() => navTo("home")}>OUR STORY</button>
-        <button className="nlink" onClick={() => navTo("home")}>PRICING</button>
+        <a className="nlink" href="/our-story" onClick={closeMobile}>OUR STORY</a>
+        <button className="nlink" onClick={() => { navTo("home"); closeMobile(); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }}>PRICING</button>
         {user && (
           <button className={"nlink" + (view === "mine" ? " on" : "")} onClick={() => navTo("mine")}>MY SESSIONS</button>
         )}
@@ -1078,9 +1078,47 @@ function MySessions({ go, user, status }) {
 
 /* ---------- home ---------- */
 function Home({ go, addLead }) {
+  // Parallax effect for hero background
+  useEffect(() => {
+    // Skip parallax if user prefers reduced motion or on mobile
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isMobile = window.innerWidth <= 860;
+    if (prefersReducedMotion || isMobile) return;
+
+    const heroImg = document.querySelector(".hero-bg-img");
+    if (!heroImg) return;
+
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          // Subtle parallax: image moves at 30% of scroll speed
+          const parallaxY = scrollY * 0.3;
+          heroImg.style.setProperty("--parallax-y", `${parallaxY}px`);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <>
       <header className="hero">
+        <div className="hero-bg">
+          <img
+            className="hero-bg-img"
+            src="/images/hero-group-lunges.JPG"
+            alt="Three athletes performing kettlebell lunges at Ignition Fitness, wide windows in background"
+            loading="eager"
+            fetchPriority="high"
+          />
+          <div className="hero-bg-overlay" />
+        </div>
         <div className="hero-glow" /><div className="hero-glow2" />
         <div className="wrap hero-in">
           <img className="hero-logo reveal d1" src={LOGO_URL} alt="Ignition Fitness" />
@@ -1089,7 +1127,7 @@ function Home({ go, addLead }) {
           <p className="hero-sub reveal d4">Small-group kettlebell training in Rancho Cucamonga. 15+ years of expert coaching, ten people max, and a whole lot of swing.</p>
           <div className="hero-cta reveal d4">
             <button className="btn btn-primary" onClick={() => go("book")}>Book Your First Class</button>
-            <button className="btn btn-ghost" onClick={() => go("home")}>See Pricing</button>
+            <button className="btn btn-ghost" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>See Pricing</button>
           </div>
           <div className="stats reveal d5">
             {[["15+","Years Coaching"],["10","Max Class Size"],["RKC","Certified Since '08"],["100%","Commitment"]].map(([n,l]) => (
@@ -1141,7 +1179,22 @@ function Home({ go, addLead }) {
 
 
       <section className="section" style={{ paddingTop: 0 }}><div className="wrap">
-        <div className="kicker">Flexible Options</div>
+        <div className="coaching-feature">
+          <div className="coaching-img">
+            <img
+              src="/images/mike-coaching-1.JPG"
+              alt="Coach Mike guiding a client's kettlebell form with hands-on instruction"
+              loading="lazy"
+            />
+          </div>
+          <div className="coaching-text">
+            <div className="kicker">Expert Guidance</div>
+            <h3>Never Guess Again</h3>
+            <p>Every rep, every set — <span className="highlight">Coach Mike is right there with you</span>. With 15+ years of RKC-certified kettlebell instruction, you'll learn proper form from day one.</p>
+            <p>Whether it's your first swing or your thousandth snatch, expert coaching is included in every session. No extra charge, no upsells.</p>
+          </div>
+        </div>
+        <div id="pricing" className="kicker">Flexible Options</div>
         <h2 className="sh">Invest In Yourself</h2>
         <p className="sh-sub">Drop-ins, memberships, and 1:1 packs. Your first class is just $25.</p>
         <div className="price-grid">
@@ -1157,7 +1210,7 @@ function Home({ go, addLead }) {
             <div className="pname">Biweekly</div>
             <div className="pamt">$75<span> /2 weeks</span></div>
             <div className="pdesc">Commit to your fitness. Save money.</div>
-            <ul><li><Check /> Unlimited group classes</li><li><Check /> All class types included</li><li><Check /> Online booking</li></ul>
+            <ul><li><Check /> Unlimited group classes</li><li><Check /> Online booking</li><li><Check /> Best value per class</li></ul>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => go("book")}>Get Started</button>
           </div>
           <div className="pcard">
@@ -1768,8 +1821,8 @@ function Footer({ go }) {
         </div>
         <div><h5>Navigate</h5>
           <a onClick={() => go("home")} style={{ cursor: "pointer" }}>Home</a>
-          <a onClick={() => go("home")} style={{ cursor: "pointer" }}>Our Story</a>
-          <a onClick={() => go("home")} style={{ cursor: "pointer" }}>Pricing</a>
+          <a href="/our-story">Our Story</a>
+          <a onClick={() => { go("home"); setTimeout(() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }), 100); }} style={{ cursor: "pointer" }}>Pricing</a>
           <a onClick={() => go("book")} style={{ cursor: "pointer" }}>Book a Class</a>
         </div>
         <div><h5>Contact</h5>
