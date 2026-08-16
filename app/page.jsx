@@ -1449,7 +1449,7 @@ function Booking({ addBooking, go, user }) {
                   <span className="k">Location</span>
                   <span className="v">{STUDIO.addressLine}</span>
                 </div>
-                {!isMulti && (
+                {!isMulti && !user && (
                   <div className="srow total">
                     <span className="k">Due at studio</span>
                     <span className="v">${price}</span>
@@ -1470,7 +1470,7 @@ function Booking({ addBooking, go, user }) {
           })}
         </div>
 
-        {isMulti && (
+        {isMulti && !user && (
           <div className="summary" style={{ marginTop: 8, textAlign: "left" }}>
             <div className="srow total">
               <span className="k">Total due at studio</span>
@@ -1758,7 +1758,7 @@ function Booking({ addBooking, go, user }) {
                         <>
                           <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
                           <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
-                          <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>
+                          {!user && <div className="srow total"><span className="k">Due at studio</span><span className="v">${cls?.price ?? 0}</span></div>}
                         </>
                       )}
                     </div>
@@ -1767,7 +1767,7 @@ function Booking({ addBooking, go, user }) {
                   <div className="summary" style={{ marginTop: 4 }}>
                     <div className="srow"><span className="k">Name</span><span className="v">{user ? user.name : form.name}</span></div>
                     <div className="srow"><span className="k">Contact</span><span className="v">{user ? user.email : form.email}</span></div>
-                    <div className="srow total"><span className="k">Total due at studio</span><span className="v">${totalPrice}</span></div>
+                    {!user && <div className="srow total"><span className="k">Total due at studio</span><span className="v">${totalPrice}</span></div>}
                   </div>
                 )}
                 <p style={{ color: "var(--ash)", fontSize: 13, fontFamily: "var(--mono)", textAlign: "center", marginTop: 12 }}>Payment is handled in person. Cancel free up to 12 hours before.</p>
