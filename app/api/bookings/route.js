@@ -5,6 +5,7 @@ import { isBlocked } from "@/lib/availability";
 import { minuteOfDay, studioNow } from "@/lib/config";
 import { currentUser, requireAdmin } from "@/lib/auth-helpers";
 import { sendBookingConfirmation } from "@/lib/email";
+import { generateManageToken, calculateTokenExpiry } from "@/lib/manage-token";
 import {
   CLASS_TYPE_TO_DB,
   DEFAULT_CAPACITY,
@@ -130,6 +131,14 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
   });
   if (taken >= session.capacity) throw new HttpError(409, "That session is full.");
 
+  // Generate manage token for email links (expires 48h after session)
+  const manageToken = generateManageToken();
+  const manageTokenExp = calculateTokenExpiry(
+    isoDay,
+    session.startTime,
+    session.durationMin || 60
+  );
+
   return tx.booking.create({
     data: {
       ref: makeRef(),
@@ -142,6 +151,8 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
       status: "CONFIRMED",
       paymentStatus: "UNPAID",
       memberPackageId: null,
+      manageToken,
+      manageTokenExp,
     },
     include: { session: true },
   });
@@ -177,6 +188,31 @@ async function captureDropInLead(tx, who) {
   });
 }
 
+/**
+ * Check if guest email matches an existing member account.
+ * If so, return that user to link the booking to their account.
+ * Also links any past guest bookings to this account.
+ */
+async function resolveGuestToMember(tx, email) {
+  const normalizedEmail = email.toLowerCase().trim();
+  const existingMember = await tx.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!existingMember || existingMember.archived) return null;
+
+  // Link any past guest bookings to this member
+  await tx.booking.updateMany({
+    where: {
+      email: { equals: normalizedEmail, mode: "insensitive" },
+      userId: null,
+    },
+    data: { userId: existingMember.id },
+  });
+
+  return existingMember;
+}
+
 export async function POST(request) {
   try {
     const prisma = getPrisma();
@@ -203,7 +239,21 @@ export async function POST(request) {
           if (!guest.success) {
             throw new HttpError(400, guest.error.issues[0]?.message ?? "Contact details are required");
           }
-          who = { ...guest.data, email: guest.data.email.toLowerCase(), userId: null };
+          const guestEmail = guest.data.email.toLowerCase();
+
+          // Check if guest email matches an existing member account
+          const existingMember = await resolveGuestToMember(tx, guestEmail);
+          if (existingMember) {
+            // Book under the existing member's account
+            who = {
+              name: existingMember.name,
+              email: existingMember.email,
+              phone: guest.data.phone || existingMember.phone || "",
+              userId: existingMember.id,
+            };
+          } else {
+            who = { ...guest.data, email: guestEmail, userId: null };
+          }
         }
 
         const ids = [...new Set(items.map((i) => i.sessionId))];
@@ -229,12 +279,29 @@ export async function POST(request) {
         throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid booking");
       }
       const input = parsed.data;
-      const who = identity ?? {
-        name: input.name,
-        email: input.email.toLowerCase(),
-        phone: input.phone,
-        userId: null,
-      };
+      const guestEmail = input.email.toLowerCase();
+
+      let who = identity;
+      if (!who) {
+        // Check if guest email matches an existing member account
+        const existingMember = await resolveGuestToMember(tx, guestEmail);
+        if (existingMember) {
+          who = {
+            name: existingMember.name,
+            email: existingMember.email,
+            phone: input.phone || existingMember.phone || "",
+            userId: existingMember.id,
+          };
+        } else {
+          who = {
+            name: input.name,
+            email: guestEmail,
+            phone: input.phone,
+            userId: null,
+          };
+        }
+      }
+
       const session = await resolveLegacySession(tx, input);
       const made = [await bookOne(tx, session, { ...who, isDropIn: input.isDropIn || !who.userId })];
       await captureDropInLead(tx, who);
@@ -248,7 +315,7 @@ export async function POST(request) {
     // mail provider is down or unconfigured.
     const mail = await sendBookingConfirmation(shaped);
     if (!mail.sent && mail.reason !== "no-api-key") {
-      console.warn(`[bookings] confirmation not sent (${mail.reason}) for ${shaped.map((b) => b.ref).join(", ")}`);
+      console.warn("[bookings] confirmation not sent (" + mail.reason + ") for " + shaped.map((b) => b.ref).join(", "));
     }
 
     // Legacy callers expect a single object back; cart callers get the array.

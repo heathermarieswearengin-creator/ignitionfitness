@@ -111,10 +111,13 @@ model Booking {
   paymentStatus   PaymentStatus  @default(UNPAID)
   memberPackage   MemberPackage? @relation(fields: [memberPackageId], references: [id])
   memberPackageId String?
+  manageToken     String?        @unique // secure token for email manage links
+  manageTokenExp  DateTime? // expires 48h after session
   createdAt       DateTime       @default(now())
 
   @@index([sessionId])
   @@index([userId])
+  @@index([email])
 }
 
 // Package definition (catalog)
