@@ -24,35 +24,98 @@ export default function StudioPage() {
         subtitle="9,000 sq ft of dedicated kettlebell training space in Rancho Cucamonga."
       />
 
-      {/* Gallery */}
+      {/* Gallery - using inline styles for reliability */}
+      <style>{`
+        .gallery-grid-top {
+          display: grid;
+          grid-template-columns: 1.6fr 1fr;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+        .gallery-grid-main {
+          display: grid;
+          grid-template-columns: 1.4fr 1fr 1fr;
+          gap: 14px;
+          margin-bottom: 40px;
+        }
+        .gallery-img {
+          border-radius: 14px;
+          overflow: hidden;
+          position: relative;
+          width: 100%;
+          min-width: 0;
+        }
+        .gallery-img img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+          display: block;
+        }
+        .gallery-img-tall { height: 380px; }
+        .gallery-img-wide { height: 280px; }
+        .gallery-img-med { height: 280px; }
+        .gallery-img-detail { width: 260px; height: 220px; flex-shrink: 0; }
+        .gallery-cta-row {
+          display: flex;
+          gap: 20px;
+          align-items: stretch;
+        }
+        .gallery-cta-row .band {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        @media (max-width: 1024px) {
+          .gallery-grid-top { grid-template-columns: 1fr 1fr; gap: 12px; }
+          .gallery-grid-main { grid-template-columns: 1fr 1fr; gap: 12px; }
+          .gallery-img-tall { height: 280px; }
+          .gallery-img-wide { height: 240px; grid-column: span 2; }
+          .gallery-img-med { height: 220px; }
+        }
+        @media (max-width: 768px) {
+          .gallery-grid-top { grid-template-columns: 1fr; }
+          .gallery-grid-main { grid-template-columns: 1fr; }
+          .gallery-img-tall { height: 240px; }
+          .gallery-img-wide { height: 220px; grid-column: auto; }
+          .gallery-img-med { height: 200px; }
+          .gallery-cta-row { flex-direction: column; gap: 16px; }
+          .gallery-img-detail { width: 100%; height: 200px; }
+        }
+        @media (max-width: 500px) {
+          .gallery-img-tall, .gallery-img-wide, .gallery-img-med { height: 180px; }
+          .gallery-img-detail { height: 160px; }
+        }
+      `}</style>
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           {/* Top row - exterior shots */}
-          <div className="studio-grid-top">
-            <div className="studio-img studio-img-lg">
+          <div className="gallery-grid-top">
+            <div className="gallery-img gallery-img-tall">
               <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" />
             </div>
-            <div className="studio-img studio-img-sm">
+            <div className="gallery-img gallery-img-tall">
               <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" />
             </div>
           </div>
 
           {/* Interior grid */}
-          <div className="studio-grid-main">
-            <div className="studio-img studio-img-wide">
+          <div className="gallery-grid-main">
+            <div className="gallery-img gallery-img-wide">
               <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" />
             </div>
-            <div className="studio-img studio-img-med">
+            <div className="gallery-img gallery-img-med">
               <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" />
             </div>
-            <div className="studio-img studio-img-med">
+            <div className="gallery-img gallery-img-med">
               <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" />
             </div>
           </div>
 
           {/* CTA with detail image */}
-          <div className="studio-cta-row">
-            <div className="studio-img studio-img-detail">
+          <div className="gallery-cta-row">
+            <div className="gallery-img gallery-img-detail">
               <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" />
             </div>
             <div className="band">
