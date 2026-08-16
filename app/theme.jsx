@@ -1051,28 +1051,41 @@ a.nlink{text-decoration:none;display:inline-flex;align-items:center}
 @media(max-width:500px){.page-header{padding:60px 0 32px}.page-header .page-sub{font-size:15px}}
 
 /* ===== STUDIO PAGE GALLERY ===== */
+/* Desktop: 2-col top (1.6fr/1fr), 3-col main (1.4fr/1fr/1fr) */
 .studio-grid-top{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px}
 .studio-grid-main{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-bottom:40px}
 .studio-cta-row{display:flex;gap:20px;align-items:stretch}
-.studio-img{border-radius:14px;overflow:hidden;position:relative}
-.studio-img img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+/* Image containers must fill their grid cell */
+.studio-img{border-radius:14px;overflow:hidden;position:relative;width:100%;min-width:0}
+.studio-img img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;max-width:none}
 .studio-img-lg{height:380px}
 .studio-img-sm{height:380px}
 .studio-img-wide{height:280px}
 .studio-img-med{height:280px}
 .studio-img-detail{width:260px;height:220px;flex-shrink:0}
 .studio-cta-row .band{flex:1;display:flex;flex-direction:column;justify-content:center}
-@media(max-width:860px){
+/* Tablet (768-1024px): 2-col layouts, reduced heights */
+@media(max-width:1024px){
   .studio-grid-top{grid-template-columns:1fr 1fr;gap:12px}
-  .studio-grid-main{grid-template-columns:1fr;gap:12px}
+  .studio-grid-main{grid-template-columns:1fr 1fr;gap:12px}
+  .studio-img-lg,.studio-img-sm{height:280px}
+  .studio-img-wide{height:240px;grid-column:span 2}
+  .studio-img-med{height:220px}
+}
+/* Small tablet / large phone (500-768px): stack to single column */
+@media(max-width:768px){
+  .studio-grid-top{grid-template-columns:1fr}
+  .studio-grid-main{grid-template-columns:1fr}
   .studio-img-lg,.studio-img-sm{height:240px}
-  .studio-img-wide,.studio-img-med{height:220px}
+  .studio-img-wide{height:220px;grid-column:auto}
+  .studio-img-med{height:200px}
   .studio-cta-row{flex-direction:column;gap:16px}
   .studio-img-detail{width:100%;height:200px}
 }
+/* Mobile (under 500px): compact heights */
 @media(max-width:500px){
-  .studio-grid-top{grid-template-columns:1fr}
-  .studio-img-lg,.studio-img-sm,.studio-img-wide,.studio-img-med{height:200px}
+  .studio-img-lg,.studio-img-sm,.studio-img-wide,.studio-img-med{height:180px}
+  .studio-img-detail{height:160px}
 }
 
 /* Quote styling with left border accent */

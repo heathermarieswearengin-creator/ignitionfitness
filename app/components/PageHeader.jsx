@@ -2,6 +2,7 @@
 
 // Shared page header component with explicit inline styles
 // Used on interior pages (Our Story, The Studio, etc.)
+// Left-aligned design with badge, title, and subtitle sharing the same left edge
 export function PageHeader({ badge, title, subtitle }) {
   return (
     <header
@@ -9,7 +10,6 @@ export function PageHeader({ badge, title, subtitle }) {
         position: "relative",
         padding: "90px 0 50px",
         overflow: "hidden",
-        textAlign: "center",
       }}
     >
       {/* Radial glow behind header */}
@@ -17,8 +17,7 @@ export function PageHeader({ badge, title, subtitle }) {
         style={{
           position: "absolute",
           top: -80,
-          left: "50%",
-          transform: "translateX(-50%)",
+          left: 0,
           width: 600,
           height: 400,
           background: "radial-gradient(ellipse, rgba(224,45,36,.15), transparent 60%)",
@@ -75,7 +74,7 @@ export function PageHeader({ badge, title, subtitle }) {
             color: "#a39080",
             fontSize: 18,
             lineHeight: 1.5,
-            margin: "0 auto",
+            margin: 0,
             maxWidth: 520,
           }}
         >

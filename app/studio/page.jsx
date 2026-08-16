@@ -30,36 +30,36 @@ export default function StudioPage() {
           {/* Top row - exterior shots */}
           <div className="studio-grid-top">
             <div className="studio-img studio-img-lg">
-              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" width={800} height={533} />
+              <img src="/images/exterior-storefront.JPG" alt="Ignition Fitness building exterior with turf lawn" loading="lazy" />
             </div>
             <div className="studio-img studio-img-sm">
-              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" width={600} height={400} />
+              <img src="/images/signage-closeup.JPG" alt="Ignition Fitness storefront signage" loading="lazy" />
             </div>
           </div>
 
           {/* Interior grid */}
           <div className="studio-grid-main">
             <div className="studio-img studio-img-wide">
-              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" width={800} height={533} />
+              <img src="/images/training-floor.JPG" alt="Open training floor with kettlebell wall and rig" loading="lazy" />
             </div>
             <div className="studio-img studio-img-med">
-              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" width={600} height={400} />
+              <img src="/images/entrance-hallway.JPG" alt="Glass entry hallway leading to gym floor" loading="lazy" />
             </div>
             <div className="studio-img studio-img-med">
-              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" width={600} height={400} />
+              <img src="/images/strength-machines.JPG" alt="Secondary equipment room with machines" loading="lazy" />
             </div>
           </div>
 
           {/* CTA with detail image */}
           <div className="studio-cta-row">
             <div className="studio-img studio-img-detail">
-              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" width={400} height={400} />
+              <img src="/images/kettlebell-detail.JPG" alt="Kettlebell close-up with Ignition logo" loading="lazy" />
             </div>
             <div className="band">
               <div className="hero-glow2" />
               <h2>Come See It For Yourself</h2>
               <p>Your first class is just $25. No commitment, no contracts.</p>
-              <button className="btn btn-ghost" onClick={() => router.push("/")}>Book Your First Class</button>
+              <button className="btn btn-ghost" onClick={() => router.push("/#book")}>Book Your First Class</button>
               <p style={{ marginTop: 16, fontSize: 14, color: "var(--ash)" }}>
                 Have questions first? <a href="/contact" style={{ color: "var(--ember2)", textDecoration: "underline", textUnderlineOffset: 2 }}>Contact us</a>
               </p>
