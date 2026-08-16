@@ -14,6 +14,7 @@ import {
   makeRef,
   to24h,
   toClientBooking,
+  toIsoDay,
 } from "@/lib/shape";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +106,7 @@ async function resolveLegacySession(tx, { classType, date: isoDay, time }) {
  * cart and legacy paths cannot diverge.
  */
 async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
-  const isoDay = new Date(session.date).toISOString().slice(0, 10);
+  const isoDay = toIsoDay(session.date);
   const now = studioNow();
 
   if (session.status === "CANCELLED") {
@@ -115,7 +116,9 @@ async function bookOne(tx, session, { name, email, phone, userId, isDropIn }) {
     throw new HttpError(409, "That session has already started.");
   }
 
-  const blocks = await tx.availabilityBlock.findMany({ where: { date: session.date } });
+  // Normalize to UTC midnight for exact date comparison
+  const sessionDate = dateOnly(isoDay);
+  const blocks = await tx.availabilityBlock.findMany({ where: { date: sessionDate } });
   if (isBlocked(isoDay, session.startTime, blocks)) {
     throw new HttpError(409, "That time is not available for booking.");
   }

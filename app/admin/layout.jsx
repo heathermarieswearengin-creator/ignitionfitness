@@ -106,7 +106,7 @@ export default function AdminLayout({ children }) {
             <span className="adm-logo-icon">I</span>
             <div className="adm-logo-text">
               <span className="adm-logo-title">Ignition</span>
-              <span className="adm-logo-sub">Coach {user?.name?.split(" ")[0] || "Mike"}</span>
+              <span className="adm-logo-sub">{user?.name || "Coach Mike"}</span>
             </div>
           </div>
         </div>

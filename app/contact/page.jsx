@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { STUDIO } from "@/lib/config";
+import { Theme } from "@/app/theme";
 
 const INTEREST_OPTIONS = [
   { value: "", label: "Select an option..." },
@@ -29,6 +30,11 @@ const Clock = ({ s = 20 }) => (
     <polyline points="12 6 12 12 16 14"/>
   </svg>
 );
+const Phone = ({ s = 20 }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+);
 const ArrowRight = ({ s = 16 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -40,6 +46,9 @@ const CheckCircle = ({ s = 48 }) => (
     <polyline points="22 4 12 14.01 9 11.01"/>
   </svg>
 );
+
+const PHONE_NUMBER = "(909) 921-4463";
+const PHONE_TEL = "tel:+19099214463";
 
 export default function ContactPage() {
   const [form, setForm] = useState({
@@ -110,97 +119,68 @@ export default function ContactPage() {
   // Success state
   if (submitted) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0c0807", padding: "60px 16px" }}>
-        <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
-          <div style={{
-            width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
-            display: "grid", placeItems: "center",
-            background: "linear-gradient(150deg, #1d1411, #281a15)",
-            border: "1.5px solid #3a261d", color: "#22c55e"
-          }}>
-            <CheckCircle s={48} />
-          </div>
-          <h1 style={{
-            fontFamily: "var(--display)", fontSize: 32, textTransform: "uppercase",
-            color: "#f3ece1", marginBottom: 12
-          }}>Message Sent</h1>
-          <p style={{ color: "#b0a193", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
-            Thanks for reaching out. We'll get back to you within 24 hours.
-          </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <a
-              href="/"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "14px 24px", background: "#1d1411", border: "1.5px solid #3a261d",
-                borderRadius: 12, color: "#f3ece1", textDecoration: "none",
-                fontFamily: "var(--mono)", fontSize: 13, fontWeight: 600,
-                textTransform: "uppercase", letterSpacing: ".04em"
-              }}
-            >
-              Back to Home
-            </a>
-            <button
-              onClick={() => setSubmitted(false)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "14px 24px", background: "transparent", border: "1.5px solid #3a261d",
-                borderRadius: 12, color: "#b0a193", cursor: "pointer",
-                fontFamily: "var(--mono)", fontSize: 13, fontWeight: 600,
-                textTransform: "uppercase", letterSpacing: ".04em"
-              }}
-            >
-              Send Another
-            </button>
+      <div className="ign">
+        <Theme />
+        <div className="wrap" style={{ padding: "60px 24px" }}>
+          <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
+            <div style={{
+              width: 100, height: 100, borderRadius: 24, margin: "0 auto 28px",
+              display: "grid", placeItems: "center",
+              background: "linear-gradient(150deg, var(--f800), var(--f700))",
+              border: "1.5px solid var(--line)", color: "#22c55e"
+            }}>
+              <CheckCircle s={48} />
+            </div>
+            <h1 style={{
+              fontFamily: "var(--display)", fontSize: 32, textTransform: "uppercase",
+              color: "var(--bone)", marginBottom: 12
+            }}>Message Sent</h1>
+            <p style={{ color: "var(--ash)", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
+              Thanks for reaching out. We'll get back to you within 24 hours.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <a href="/" className="btn btn-ghost">
+                Back to Home
+              </a>
+              <button onClick={() => setSubmitted(false)} className="btn btn-ghost">
+                Send Another
+              </button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const inputStyle = (hasError) => ({
-    width: "100%", padding: "14px 16px",
-    background: "#140d0b", border: `1.5px solid ${hasError ? "#ef4444" : "#3a261d"}`,
-    borderRadius: 10, color: "#f3ece1", fontSize: 15,
-    fontFamily: "inherit", outline: "none",
-    transition: "border-color .15s"
-  });
-
-  const labelStyle = {
-    display: "block", marginBottom: 8,
-    fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600,
-    letterSpacing: ".08em", textTransform: "uppercase", color: "#b0a193"
-  };
-
-  const errorStyle = {
-    marginTop: 6, fontSize: 12, color: "#ef4444"
-  };
-
   return (
-    <div style={{ minHeight: "100vh", background: "#0c0807", padding: "48px 16px 80px" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{
-            fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700,
-            letterSpacing: ".18em", color: "#e02d24", textTransform: "uppercase",
-            marginBottom: 8
-          }}>Get in Touch</div>
-          <h1 style={{
-            fontFamily: "var(--display)", fontSize: "clamp(32px, 6vw, 44px)",
-            textTransform: "uppercase", color: "#f3ece1", marginBottom: 10, lineHeight: 1.1
-          }}>Contact Us</h1>
-          <p style={{ color: "#b0a193", fontSize: 16, lineHeight: 1.5 }}>
-            We'll get back to you within 24 hours.
-          </p>
-        </div>
+    <div className="ign">
+      <Theme />
+      <div className="wrap" style={{ padding: "48px 24px 80px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          {/* Header */}
+          <div style={{ marginBottom: 40 }}>
+            <div className="eyebrow" style={{ marginBottom: 20 }}>
+              <span className="dot" />
+              Get in Touch
+            </div>
+            <h1 className="sh" style={{ marginBottom: 12 }}>Contact Us</h1>
+            <p style={{ color: "var(--ash)", fontSize: 16, lineHeight: 1.5, marginBottom: 20 }}>
+              Have a question or ready to start? We're here to help.
+            </p>
+            {/* Quick contact buttons */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <a href={PHONE_TEL} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+                <Phone s={18} />
+                Call Us
+              </a>
+              <a href="mailto:mike@ignitionfitness.com" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+                <Mail s={18} />
+                Email Us
+              </a>
+            </div>
+          </div>
 
-        {/* Two-column layout */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: 32,
-        }}>
+          {/* Two-column layout */}
           <style>{`
             @media (min-width: 700px) {
               .contact-grid { grid-template-columns: 1fr 340px !important; }
@@ -213,7 +193,7 @@ export default function ContactPage() {
           }}>
             {/* Form */}
             <form onSubmit={handleSubmit} style={{
-              background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 20,
+              background: "var(--f900)", border: "1.5px solid var(--line)", borderRadius: 20,
               padding: "28px 24px"
             }}>
               {submitError && (
@@ -237,92 +217,103 @@ export default function ContactPage() {
                 </div>
               )}
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>Name *</label>
+              <div className="field">
+                <label>Name *</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={handleChange("name")}
-                  style={inputStyle(errors.name)}
                   placeholder="Your name"
+                  style={errors.name ? { borderColor: "#ef4444" } : {}}
                 />
-                {errors.name && <div style={errorStyle}>{errors.name}</div>}
+                {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#ef4444" }}>{errors.name}</div>}
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>Email *</label>
+              <div className="field">
+                <label>Email *</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={handleChange("email")}
-                  style={inputStyle(errors.email)}
                   placeholder="you@example.com"
+                  style={errors.email ? { borderColor: "#ef4444" } : {}}
                 />
-                {errors.email && <div style={errorStyle}>{errors.email}</div>}
+                {errors.email && <div style={{ marginTop: 6, fontSize: 12, color: "#ef4444" }}>{errors.email}</div>}
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>Phone <span style={{ color: "#6b5d52", fontWeight: 400 }}>(optional)</span></label>
+              <div className="field">
+                <label>Phone <span style={{ color: "#6b5d52", fontWeight: 400 }}>(optional)</span></label>
                 <input
                   type="tel"
                   value={form.phone}
                   onChange={handleChange("phone")}
-                  style={inputStyle(false)}
                   placeholder="(555) 123-4567"
                 />
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>I'm interested in</label>
+              <div className="field">
+                <label>I'm interested in</label>
                 <select
                   value={form.interest}
                   onChange={handleChange("interest")}
                   style={{
-                    ...inputStyle(false),
+                    width: "100%",
+                    background: "var(--f800)",
+                    border: "1.5px solid var(--line)",
+                    borderRadius: 11,
+                    padding: "13px 15px",
+                    color: "var(--bone)",
+                    fontFamily: "var(--body)",
+                    fontSize: 16,
+                    outline: "none",
                     cursor: "pointer",
                     appearance: "none",
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0a193' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "right 14px center",
-                    paddingRight: 44
+                    paddingRight: 44,
+                    minHeight: 48,
+                    transition: ".16s"
                   }}
                 >
                   {INTEREST_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value} style={{ background: "#140d0b" }}>
+                    <option key={opt.value} value={opt.value} style={{ background: "var(--f900)" }}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={labelStyle}>Message *</label>
+              <div className="field">
+                <label>Message *</label>
                 <textarea
                   value={form.message}
                   onChange={handleChange("message")}
                   rows={5}
-                  style={{
-                    ...inputStyle(errors.message),
-                    resize: "vertical", minHeight: 120
-                  }}
                   placeholder="How can we help you?"
+                  style={{
+                    width: "100%",
+                    background: "var(--f800)",
+                    border: `1.5px solid ${errors.message ? "#ef4444" : "var(--line)"}`,
+                    borderRadius: 11,
+                    padding: "13px 15px",
+                    color: "var(--bone)",
+                    fontFamily: "var(--body)",
+                    fontSize: 16,
+                    outline: "none",
+                    resize: "vertical",
+                    minHeight: 120,
+                    transition: ".16s"
+                  }}
                 />
-                {errors.message && <div style={errorStyle}>{errors.message}</div>}
+                {errors.message && <div style={{ marginTop: 6, fontSize: 12, color: "#ef4444" }}>{errors.message}</div>}
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                style={{
-                  width: "100%", padding: "16px 24px",
-                  background: submitting ? "#6b5d52" : "linear-gradient(135deg, #e02d24, #c9251c)",
-                  border: "none", borderRadius: 12, color: "#f3ece1",
-                  fontFamily: "var(--display)", fontSize: 15, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: ".04em",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  opacity: submitting ? 0.7 : 1,
-                  transition: "opacity .15s"
-                }}
+                className="btn btn-primary"
+                style={{ width: "100%", marginTop: 8 }}
               >
                 {submitting ? "Sending..." : "Send Message"}
               </button>
@@ -331,33 +322,35 @@ export default function ContactPage() {
             {/* Studio Info Panel */}
             <div>
               <div style={{
-                background: "#1d1411", border: "1.5px solid #3a261d", borderRadius: 20,
+                background: "var(--f800)", border: "1.5px solid var(--line)", borderRadius: 20,
                 padding: "28px 24px"
               }}>
                 <h2 style={{
                   fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700,
-                  letterSpacing: ".12em", textTransform: "uppercase", color: "#f0ab33",
+                  letterSpacing: ".12em", textTransform: "uppercase", color: "var(--gold)",
                   marginBottom: 24
                 }}>Studio Info</h2>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  {/* Address */}
+                  {/* Phone */}
                   <div style={{ display: "flex", gap: 14 }}>
                     <div style={{
                       width: 40, height: 40, minWidth: 40, borderRadius: 10,
                       display: "grid", placeItems: "center",
-                      background: "rgba(224,45,36,.1)", color: "#e02d24"
+                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
                     }}>
-                      <MapPin s={20} />
+                      <Phone s={20} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f3ece1", marginBottom: 3 }}>
-                        Location
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
+                        Phone
                       </div>
-                      <div style={{ fontSize: 13, color: "#b0a193", lineHeight: 1.5 }}>
-                        {STUDIO.addressLine}<br />
-                        Rancho Cucamonga, CA 91730
-                      </div>
+                      <a
+                        href={PHONE_TEL}
+                        style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none" }}
+                      >
+                        {PHONE_NUMBER}
+                      </a>
                     </div>
                   </div>
 
@@ -366,20 +359,40 @@ export default function ContactPage() {
                     <div style={{
                       width: 40, height: 40, minWidth: 40, borderRadius: 10,
                       display: "grid", placeItems: "center",
-                      background: "rgba(224,45,36,.1)", color: "#e02d24"
+                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
                     }}>
                       <Mail s={20} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f3ece1", marginBottom: 3 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
                         Email
                       </div>
                       <a
                         href="mailto:mike@ignitionfitness.com"
-                        style={{ fontSize: 13, color: "#f0ab33", textDecoration: "none" }}
+                        style={{ fontSize: 13, color: "var(--gold)", textDecoration: "none" }}
                       >
                         mike@ignitionfitness.com
                       </a>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div style={{ display: "flex", gap: 14 }}>
+                    <div style={{
+                      width: 40, height: 40, minWidth: 40, borderRadius: 10,
+                      display: "grid", placeItems: "center",
+                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
+                    }}>
+                      <MapPin s={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
+                        Location
+                      </div>
+                      <div style={{ fontSize: 13, color: "var(--ash)", lineHeight: 1.5 }}>
+                        {STUDIO.addressLine}<br />
+                        Rancho Cucamonga, CA 91730
+                      </div>
                     </div>
                   </div>
 
@@ -388,15 +401,15 @@ export default function ContactPage() {
                     <div style={{
                       width: 40, height: 40, minWidth: 40, borderRadius: 10,
                       display: "grid", placeItems: "center",
-                      background: "rgba(224,45,36,.1)", color: "#e02d24"
+                      background: "rgba(224,45,36,.1)", color: "var(--flame)"
                     }}>
                       <Clock s={20} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f3ece1", marginBottom: 3 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--bone)", marginBottom: 3 }}>
                         Hours
                       </div>
-                      <div style={{ fontSize: 13, color: "#b0a193", lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 13, color: "var(--ash)", lineHeight: 1.5 }}>
                         Mon–Fri: 6am–8pm<br />
                         Sat: 8am–12pm<br />
                         Sun: Closed
@@ -406,29 +419,55 @@ export default function ContactPage() {
                 </div>
               </div>
 
+              {/* Prefer to call CTA */}
+              <div style={{
+                marginTop: 16,
+                background: "linear-gradient(150deg, rgba(224,45,36,.08), var(--f900))",
+                border: "1.5px solid var(--ember)",
+                borderRadius: 16,
+                padding: "20px 22px",
+                textAlign: "center"
+              }}>
+                <div style={{
+                  fontSize: 15, fontWeight: 600, color: "var(--bone)", marginBottom: 6
+                }}>
+                  Prefer to call or text?
+                </div>
+                <p style={{ fontSize: 13, color: "var(--ash)", marginBottom: 14, lineHeight: 1.5 }}>
+                  We're happy to chat. Give us a call or shoot us a text.
+                </p>
+                <a
+                  href={PHONE_TEL}
+                  className="btn btn-primary"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    textDecoration: "none"
+                  }}
+                >
+                  <Phone s={16} />
+                  <span>{PHONE_NUMBER}</span>
+                </a>
+              </div>
+
               {/* Book CTA */}
               <div style={{
                 marginTop: 16,
-                background: "#140d0b", border: "1.5px solid #3a261d", borderRadius: 16,
+                background: "var(--f900)", border: "1.5px solid var(--line)", borderRadius: 16,
                 padding: "20px 22px"
               }}>
                 <div style={{
-                  fontSize: 15, fontWeight: 600, color: "#f3ece1", marginBottom: 6
+                  fontSize: 15, fontWeight: 600, color: "var(--bone)", marginBottom: 6
                 }}>
                   Ready to book?
                 </div>
-                <p style={{ fontSize: 13, color: "#b0a193", marginBottom: 14, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: "var(--ash)", marginBottom: 14, lineHeight: 1.5 }}>
                   Skip the form and book your session directly.
                 </p>
                 <a
                   href="/#book"
+                  className="btn btn-ghost"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8,
-                    padding: "12px 18px",
-                    background: "linear-gradient(135deg, #e02d24, #c9251c)",
-                    border: "none", borderRadius: 10, color: "#f3ece1",
-                    fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600,
-                    textTransform: "uppercase", letterSpacing: ".04em",
                     textDecoration: "none"
                   }}
                 >

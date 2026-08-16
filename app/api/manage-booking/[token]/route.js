@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { HttpError, serializableTx, jsonError } from "@/lib/tx";
 import { studioNow, minuteOfDay } from "@/lib/config";
-import { toClientBooking, makeRef } from "@/lib/shape";
+import { toClientBooking, makeRef, toIsoDay, dateOnly } from "@/lib/shape";
 import { isBlocked } from "@/lib/availability";
 import { sendCancellationEmail, sendRescheduleEmail } from "@/lib/email";
 import { generateManageToken, calculateTokenExpiry } from "@/lib/manage-token";
@@ -155,7 +155,7 @@ async function handleCancel(token) {
 
   // Check if session has already started
   const now = studioNow();
-  const isoDay = booking.session.date.toISOString().slice(0, 10);
+  const isoDay = toIsoDay(booking.session.date);
   if (isoDay < now.isoDay || (isoDay === now.isoDay && minuteOfDay(booking.session.startTime) <= now.minutes)) {
     throw new HttpError(400, "Cannot cancel a session that has already started.");
   }
@@ -202,7 +202,7 @@ async function handleReschedule(token, newSessionId) {
     }
 
     const now = studioNow();
-    const oldIsoDay = booking.session.date.toISOString().slice(0, 10);
+    const oldIsoDay = toIsoDay(booking.session.date);
     if (oldIsoDay < now.isoDay || (oldIsoDay === now.isoDay && minuteOfDay(booking.session.startTime) <= now.minutes)) {
       throw new HttpError(400, "Cannot reschedule a session that has already started.");
     }
@@ -221,13 +221,14 @@ async function handleReschedule(token, newSessionId) {
       throw new HttpError(400, "Can only reschedule to the same session type.");
     }
 
-    const newIsoDay = newSession.date.toISOString().slice(0, 10);
+    const newIsoDay = toIsoDay(newSession.date);
     if (newIsoDay < now.isoDay || (newIsoDay === now.isoDay && minuteOfDay(newSession.startTime) <= now.minutes)) {
       throw new HttpError(400, "Cannot reschedule to a past session.");
     }
 
-    // Check blocks
-    const blocks = await tx.availabilityBlock.findMany({ where: { date: newSession.date } });
+    // Check blocks - normalize to UTC midnight for exact date comparison
+    const sessionDate = dateOnly(newIsoDay);
+    const blocks = await tx.availabilityBlock.findMany({ where: { date: sessionDate } });
     if (isBlocked(newIsoDay, newSession.startTime, blocks)) {
       throw new HttpError(409, "That time is not available for booking.");
     }
