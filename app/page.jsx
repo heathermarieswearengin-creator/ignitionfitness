@@ -1388,6 +1388,22 @@ function Booking({ addBooking, go, user }) {
   const slotsForDate = (d) => slots.filter((s) => s.date === d && s.classType === classType);
   const dayHasSlots = (d) => slots.some((s) => s.date === d && s.classType === classType && s.spotsLeft > 0);
 
+  // Calendar days must be computed before any early returns to satisfy React's rules of hooks
+  const calendarDays = useMemo(() => {
+    const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
+    const lastOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month + 1, 0));
+    const startPad = firstOfMonth.getUTCDay();
+    const totalDays = lastOfMonth.getUTCDate();
+    const days = [];
+    for (let i = 0; i < startPad; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, 1 - (startPad - i))), outside: true });
+    for (let i = 1; i <= totalDays; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, i)), outside: false });
+    while (days.length < 42) { const last = days[days.length - 1].date; days.push({ date: new Date(last.getTime() + 86400000), outside: true }); }
+    return days;
+  }, [viewMonth]);
+
+  const todayIso = studioNow().isoDay;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
   const reset = () => {
     setDone(null); setStep(1); setClassType(null); setSelectedDate(null);
     setSelectedSlot(null); setSelectedSlots([]); setError(null);
@@ -1524,20 +1540,6 @@ function Booking({ addBooking, go, user }) {
   const contactOk = user ? true : form.name && /\S+@\S+\.\S+/.test(form.email) && form.phone.length >= 7;
   const canNext = (step === 1 && classType) || (step === 2 && selectedSlots.length > 0) || (step === 3 && contactOk);
 
-  const calendarDays = useMemo(() => {
-    const firstOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month, 1));
-    const lastOfMonth = new Date(Date.UTC(viewMonth.year, viewMonth.month + 1, 0));
-    const startPad = firstOfMonth.getUTCDay();
-    const totalDays = lastOfMonth.getUTCDate();
-    const days = [];
-    for (let i = 0; i < startPad; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, 1 - (startPad - i))), outside: true });
-    for (let i = 1; i <= totalDays; i++) days.push({ date: new Date(Date.UTC(viewMonth.year, viewMonth.month, i)), outside: false });
-    while (days.length < 42) { const last = days[days.length - 1].date; days.push({ date: new Date(last.getTime() + 86400000), outside: true }); }
-    return days;
-  }, [viewMonth]);
-
-  const todayIso = studioNow().isoDay;
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const prevMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month - 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); setSelectedDate(null); };
   const nextMonth = () => { setViewMonth(v => { const d = new Date(Date.UTC(v.year, v.month + 1, 1)); return { year: d.getUTCFullYear(), month: d.getUTCMonth() }; }); setSelectedDate(null); };
 
