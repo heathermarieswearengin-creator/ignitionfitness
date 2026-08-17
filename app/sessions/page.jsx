@@ -37,6 +37,13 @@ export default function SessionsPage() {
     }
   }, [status, router]);
 
+  // Redirect admin users to admin dashboard
+  useEffect(() => {
+    if (isAdmin) {
+      router.replace("/admin/overview");
+    }
+  }, [isAdmin, router]);
+
   useEffect(() => {
     if (!user) return;
     const load = async () => {

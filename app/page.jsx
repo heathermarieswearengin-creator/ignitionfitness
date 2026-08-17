@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { studioNow, STUDIO } from "@/lib/config";
 import { to12h } from "@/lib/shape";
 import { googleCalendarUrl } from "@/lib/ics";
@@ -87,10 +88,18 @@ class BookingErrorBoundary extends React.Component {
 /* ================= APP ================= */
 export default function App() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const user = session?.user ?? null;
   const isAdmin = user?.role === "ADMIN";
 
   const [view, setView] = useState("home");
+
+  // Redirect admin users to admin dashboard
+  useEffect(() => {
+    if (isAdmin) {
+      router.replace("/admin/overview");
+    }
+  }, [isAdmin, router]);
 
   // Handle #book hash navigation from other pages
   useEffect(() => {
